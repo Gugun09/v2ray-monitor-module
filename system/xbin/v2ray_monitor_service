@@ -1,0 +1,33 @@
+#!/system/bin/sh
+
+# File PID untuk proses monitoring
+PID_FILE="/data/local/tmp/v2ray_monitor.pid"
+
+case "$1" in
+    start)
+        if [ -f "$PID_FILE" ]; then
+            echo "✅ V2Ray Monitor sudah berjalan."
+        else
+            echo "🚀 Memulai V2Ray Monitor..."
+            sh /system/xbin/v2ray_monitor.sh start
+        fi
+        ;;
+    stop)
+        if [ -f "$PID_FILE" ]; then
+            sh /system/xbin/v2ray_monitor.sh stop
+            echo "✅ V2Ray Monitor dihentikan."
+        else
+            echo "❌ V2Ray Monitor tidak berjalan."
+        fi
+        ;;
+    restart)
+        sh /system/xbin/v2ray_monitor.sh restart
+        ;;
+    status)
+        sh /system/xbin/v2ray_monitor.sh status
+        ;;
+    *)
+        echo "🔹 Penggunaan: v2ray_monitor_service {start|stop|restart|status}"
+        exit 1
+        ;;
+esac
