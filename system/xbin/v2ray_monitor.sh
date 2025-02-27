@@ -5,8 +5,8 @@ LOG_FILE="/data/local/tmp/v2ray_monitor.log"
 LAST_STATUS_FILE="/data/local/tmp/v2ray_monitor_status"
 RESTART_COUNT_FILE="/data/local/tmp/v2ray_restart_count"
 
-TELEGRAM_BOT_TOKEN="7544147318:AAHaEPqtwH0TmW4jao8lspNy-r8EZu2ty8Y"
-TELEGRAM_CHAT_ID="5946382727"
+TELEGRAM_BOT_TOKEN=""
+TELEGRAM_CHAT_ID=""
 
 send_telegram() {
     MESSAGE="$1"
