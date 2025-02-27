@@ -5,8 +5,7 @@ LOG_FILE="/data/local/tmp/v2ray_monitor.log"
 LAST_STATUS_FILE="/data/local/tmp/v2ray_monitor_status"
 RESTART_COUNT_FILE="/data/local/tmp/v2ray_restart_count"
 
-TELEGRAM_BOT_TOKEN=""
-TELEGRAM_CHAT_ID=""
+source /data/local/tmp/.env
 
 send_telegram() {
     MESSAGE="$1"
@@ -80,7 +79,7 @@ monitor() {
         TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
         # Cek koneksi menggunakan curl
-        if su -c "curl --silent --fail --max-time 5 https://creativeservices.netflix.com" > /dev/null 2>&1; then
+        if su -c "curl --silent --fail --max-time 3 https://creativeservices.netflix.com" > /dev/null 2>&1; then
             CURRENT_STATUS="VPN TERHUBUNG"
         else
             CURRENT_STATUS="VPN TIDAK TERHUBUNG"
@@ -119,10 +118,10 @@ monitor() {
         # Jika tidak terhubung, lakukan retry sebelum restart
         if [ "$CURRENT_STATUS" = "VPN TIDAK TERHUBUNG" ]; then
             RETRY_COUNT=$((RETRY_COUNT + 1))
-            echo "[$TIMESTAMP] ❌ Koneksi gagal ($RETRY_COUNT/$MAX_RETRY). Menunggu 5 detik..." | tee -a "$LOG_FILE"
-            sleep 5
+            echo "[$TIMESTAMP] ❌ Koneksi gagal ($RETRY_COUNT/$MAX_RETRY). Menunggu 3 detik..." | tee -a "$LOG_FILE"
+            sleep 3
 
-            if su -c "curl --silent --fail --max-time 5 https://creativeservices.netflix.com" > /dev/null 2>&1; then
+            if su -c "curl --silent --fail --max-time 3 https://creativeservices.netflix.com" > /dev/null 2>&1; then
                 echo "[$TIMESTAMP] ✅ Koneksi kembali normal tanpa restart." | tee -a "$LOG_FILE"
                 RETRY_COUNT=0  # Reset retry count
             elif [ "$RETRY_COUNT" -ge "$MAX_RETRY" ]; then
@@ -139,13 +138,12 @@ monitor() {
                 su -c "input tap 1027 169"
                 sleep 2
                 su -c "input tap 648 195"
-                sleep 3
 
                 RETRY_COUNT=0  # Reset retry count setelah restart
             fi
         fi
 
-        sleep 30
+        sleep 10
     done
 }
 
