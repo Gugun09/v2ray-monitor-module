@@ -1,6 +1,6 @@
 id=v2ray_monitor
 name=V2Ray Monitor Auto Restart
-version=1.0
+version=1.1
 versionCode=1
 author=Gugun09
 description=Monitor V2Ray dan restart otomatis jika koneksi terputus.
