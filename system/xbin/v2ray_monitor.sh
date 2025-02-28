@@ -4,6 +4,8 @@ PID_FILE="/data/local/tmp/v2ray_monitor.pid"
 LOG_FILE="/data/local/tmp/v2ray_monitor.log"
 LAST_STATUS_FILE="/data/local/tmp/v2ray_monitor_status"
 RESTART_COUNT_FILE="/data/local/tmp/v2ray_restart_count"
+LOCAL_DEVICES=$(ip neigh show | awk '/REACHABLE/ {print $1, $5}')
+HOSTNAME=$(getprop ro.product.model)
 
 source /data/local/tmp/.env
 
@@ -16,6 +18,10 @@ send_telegram() {
 
 get_public_ip() {
     curl -s https://api64.ipify.org || echo "Tidak diketahui"
+}
+
+get_local_ip() {
+    ip -4 addr show rmnet_data3 | awk '/inet / {print $2}' | cut -d/ -f1 || echo "Tidak diketahui"
 }
 
 start() {
@@ -106,10 +112,16 @@ monitor() {
                 fi
 
                 PUBLIC_IP=$(get_public_ip)
+                LOCAL_IP=$(get_local_ip)
                 send_telegram "✅ V2Ray kembali online pada $TIMESTAMP.
-🌍 **IP Publik**: $PUBLIC_IP
-⏳ **Downtime**: $DURATION_HUMAN
-🔄 **Restart Hari Ini**: $(cat $RESTART_COUNT_FILE) kali"
+🌍 *IP Publik*: $PUBLIC_IP
+📶 *IP Lokal*: $LOCAL_IP
+⏳ *Downtime*: $DURATION_HUMAN
+🔄 *Restart Hari Ini*: $(cat $RESTART_COUNT_FILE) kali
+--------------------------------
+📡 *Monitoring Koneksi*
+🤖 *Hostname Perangkat Ini:* $HOSTNAME
+🔍 *Perangkat yang terhubung ke WiFi:* $LOCAL_DEVICES "
             fi
 
             LAST_STATUS="$CURRENT_STATUS"

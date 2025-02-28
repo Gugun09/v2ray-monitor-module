@@ -9,6 +9,7 @@ if [ ! -f "$ENV_FILE" ]; then
     echo "📂 Membuat file .env dari template..."
     cp "$ENV_TEMPLATE" "$ENV_FILE"
     chmod 600 "$ENV_FILE"
+    sed -i 's/\r$//' /data/local/tmp/.env
     echo "✅ .env berhasil dibuat di $ENV_FILE"
 else
     echo "✅ .env sudah ada, tidak perlu membuat ulang."
