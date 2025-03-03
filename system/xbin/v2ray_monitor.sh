@@ -4,16 +4,25 @@ PID_FILE="/data/local/tmp/v2ray_monitor.pid"
 LOG_FILE="/data/local/tmp/v2ray_monitor.log"
 LAST_STATUS_FILE="/data/local/tmp/v2ray_monitor_status"
 RESTART_COUNT_FILE="/data/local/tmp/v2ray_restart_count"
-LOCAL_DEVICES=$(ip neigh show | awk '/REACHABLE/ {print $1, $5}')
-HOSTNAME=$(getprop ro.product.model)
 
 source /data/local/tmp/.env
 
+HOSTNAME=$(getprop ro.product.model)
+STATUS_FILE="/data/local/tmp/v2ray_status.json"
+
+update_status_json() {
+    echo "{
+        \"status\": \"$1\",
+        \"timestamp\": \"$(date '+%Y-%m-%d %H:%M:%S')\",
+        \"restart_count\": \"$(cat $RESTART_COUNT_FILE)\"
+    }" > "$STATUS_FILE"
+}
+
 send_telegram() {
-    MESSAGE="$1"
     curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
         -d chat_id="$TELEGRAM_CHAT_ID" \
-        -d text="$MESSAGE" > /dev/null
+        -d text="$1" > /dev/null &
+        update_status_json "Telegram notification sent"
 }
 
 get_public_ip() {
@@ -21,7 +30,7 @@ get_public_ip() {
 }
 
 get_local_ip() {
-    ip -4 addr show rmnet_data3 | awk '/inet / {print $2}' | cut -d/ -f1 || echo "Tidak diketahui"
+    ip -4 addr show rmnet_data4 | awk '/inet / {print $2}' | cut -d/ -f1 || echo "Tidak diketahui"
 }
 
 start() {
@@ -31,7 +40,6 @@ start() {
             echo "✅ Skrip sudah berjalan dengan PID $PID."
             exit 1
         else
-            echo "⚠️ File PID ditemukan tetapi proses tidak berjalan. Menghapus file PID..."
             rm -f "$PID_FILE"
         fi
     fi
@@ -45,14 +53,8 @@ start() {
 
 stop() {
     if [ -f "$PID_FILE" ]; then
-        PID=$(cat "$PID_FILE")
-        if ps -p $PID > /dev/null 2>&1; then
-            kill "$PID" && rm -f "$PID_FILE"
-            echo "✅ Skrip telah dihentikan."
-        else
-            echo "⚠️ Proses dengan PID $PID tidak ditemukan. Menghapus file PID..."
-            rm -f "$PID_FILE"
-        fi
+        kill "$(cat "$PID_FILE")" && rm -f "$PID_FILE"
+        echo "✅ Skrip telah dihentikan."
     else
         echo "❌ Skrip tidak berjalan."
     fi
@@ -61,101 +63,71 @@ stop() {
 restart() {
     echo "🔄 Restarting skrip..."
     stop
-    sleep 2
+    sleep 1
     start
-}
-
-status() {
-    if [ -f "$PID_FILE" ]; then
-        echo "✅ Skrip berjalan dengan PID $(cat $PID_FILE)."
-    else
-        echo "❌ Skrip tidak berjalan."
-    fi
 }
 
 monitor() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] 🚀 Memulai monitoring V2Ray..." > "$LOG_FILE"
-
     LAST_STATUS=""
-    DOWNTIME_START=""
     RETRY_COUNT=0
     MAX_RETRY=3
 
     while true; do
         TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
-        # Cek koneksi menggunakan curl
-        if su -c "curl --silent --fail --max-time 3 https://creativeservices.netflix.com" > /dev/null 2>&1; then
+        if curl --silent --fail --max-time 2 https://creativeservices.netflix.com > /dev/null 2>&1; then
             CURRENT_STATUS="VPN TERHUBUNG"
         else
             CURRENT_STATUS="VPN TIDAK TERHUBUNG"
         fi
 
-        # Hanya log jika status berubah
         if [ "$CURRENT_STATUS" != "$LAST_STATUS" ]; then
             echo "[$TIMESTAMP] $CURRENT_STATUS" | tee -a "$LOG_FILE"
             echo "$CURRENT_STATUS" > "$LAST_STATUS_FILE"
+            update_status_json "$CURRENT_STATUS"  # Update status in JSON
 
-            # Jika VPN mati, catat waktu mulai
-            if [ "$CURRENT_STATUS" = "VPN TIDAK TERHUBUNG" ]; then
-                DOWNTIME_START=$(date '+%s')
-                RETRY_COUNT=0  # Reset counter retry
-            fi
-
-            # Jika VPN kembali online, kirim notifikasi Telegram
             if [ "$CURRENT_STATUS" = "VPN TERHUBUNG" ]; then
-                if [ -n "$DOWNTIME_START" ]; then
-                    DURATION=$(( $(date '+%s') - DOWNTIME_START ))
-                    DURATION_HUMAN="$(($DURATION / 3600)) jam $((($DURATION % 3600) / 60)) menit $(($DURATION % 60)) detik"
-                else
-                    DURATION_HUMAN="Tidak diketahui"
-                fi
-
                 PUBLIC_IP=$(get_public_ip)
                 LOCAL_IP=$(get_local_ip)
                 send_telegram "✅ V2Ray kembali online pada $TIMESTAMP.
 🌍 *IP Publik*: $PUBLIC_IP
 📶 *IP Lokal*: $LOCAL_IP
-⏳ *Downtime*: $DURATION_HUMAN
 🔄 *Restart Hari Ini*: $(cat $RESTART_COUNT_FILE) kali
 --------------------------------
 📡 *Monitoring Koneksi*
-🤖 *Hostname Perangkat Ini:* $HOSTNAME
-🔍 *Perangkat yang terhubung ke WiFi:* $LOCAL_DEVICES "
+🤖 *Hostname:* $HOSTNAME"
             fi
 
             LAST_STATUS="$CURRENT_STATUS"
         fi
 
-        # Jika tidak terhubung, lakukan retry sebelum restart
+        # Cek koneksi jika tidak terhubung
         if [ "$CURRENT_STATUS" = "VPN TIDAK TERHUBUNG" ]; then
             RETRY_COUNT=$((RETRY_COUNT + 1))
-            echo "[$TIMESTAMP] ❌ Koneksi gagal ($RETRY_COUNT/$MAX_RETRY). Menunggu 3 detik..." | tee -a "$LOG_FILE"
-            sleep 3
+            echo "[$TIMESTAMP] ❌ Koneksi gagal ($RETRY_COUNT/$MAX_RETRY). Menunggu 2 detik..." | tee -a "$LOG_FILE"
+            sleep 2
 
-            if su -c "curl --silent --fail --max-time 3 https://creativeservices.netflix.com" > /dev/null 2>&1; then
+            if curl --silent --fail --max-time 2 https://creativeservices.netflix.com > /dev/null 2>&1; then
                 echo "[$TIMESTAMP] ✅ Koneksi kembali normal tanpa restart." | tee -a "$LOG_FILE"
-                RETRY_COUNT=0  # Reset retry count
+                RETRY_COUNT=0
             elif [ "$RETRY_COUNT" -ge "$MAX_RETRY" ]; then
-                echo "[$TIMESTAMP] 🔄 Mencoba mengaktifkan ulang V2Ray..." | tee -a "$LOG_FILE"
-
+                echo "[$TIMESTAMP] 🔄 Restarting V2Ray..." | tee -a "$LOG_FILE"
                 RESTART_COUNT=$(cat "$RESTART_COUNT_FILE")
                 echo $((RESTART_COUNT + 1)) > "$RESTART_COUNT_FILE"
+                update_status_json "Restarting V2Ray"  # Update status JSON with restart info
 
-                # Buka aplikasi v2rayNG
                 su -c "am start -n com.v2ray.ang/com.v2ray.ang.ui.MainActivity"
                 sleep 2
-
-                # Tekan tombol untuk mengaktifkan V2Ray
                 su -c "input tap 1027 169"
                 sleep 2
                 su -c "input tap 648 195"
 
-                RETRY_COUNT=0  # Reset retry count setelah restart
+                RETRY_COUNT=0
             fi
         fi
 
-        sleep 10
+        sleep 8
     done
 }
 
@@ -163,10 +135,9 @@ case "$1" in
     start) start ;;
     stop) stop ;;
     restart) restart ;;
-    status) status ;;
     monitor) monitor ;;
     *)
-        echo "🔹 Penggunaan: $0 {start|stop|restart|status}"
+        echo "🔹 Penggunaan: $0 {start|stop|restart|monitor}"
         exit 1
         ;;
 esac

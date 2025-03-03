@@ -1,26 +1,37 @@
 #!/system/bin/sh
 MODDIR=${0%/*}
 
+# File dan template .env
 ENV_FILE="/data/local/tmp/.env"
 ENV_TEMPLATE="$MODDIR/.env-example"
 
-# Buat .env jika belum ada
+# Membuat file .env jika belum ada
 if [ ! -f "$ENV_FILE" ]; then
     echo "📂 Membuat file .env dari template..."
     cp "$ENV_TEMPLATE" "$ENV_FILE"
     chmod 600 "$ENV_FILE"
-    sed -i 's/\r$//' /data/local/tmp/.env
+    sed -i 's/\r$//' "$ENV_FILE"  # Menghapus karakter carriage return pada file .env
     echo "✅ .env berhasil dibuat di $ENV_FILE"
 else
     echo "✅ .env sudah ada, tidak perlu membuat ulang."
 fi
 
-# Beri izin eksekusi ke skrip
-chmod +x /system/xbin/v2ray_monitor.sh
+# Beri izin eksekusi pada skrip
+chmod +x /data/adb/modules/v2ray_monitor/ui/start_server.sh
 
-# Tambahkan delay untuk memastikan sistem stabil
+# Delay untuk memastikan sistem stabil
 sleep 10
 
-# Jalankan skrip monitoring di background
-sh /system/xbin/v2ray_monitor.sh start &
-echo "✅ Skrip monitoring V2Ray telah dimulai."
+# Jalankan server UI di background
+sh /data/adb/modules/v2ray_monitor/ui/start_server.sh &
+if [ $? -eq 0 ]; then
+    echo "✅ Server dimulai dengan sukses."
+else
+    echo "❌ Gagal menjalankan server."
+fi
+
+# Menunggu proses untuk memastikan semuanya berjalan
+sleep 5
+
+echo "✅ Server UI telah dimulai."
+echo "🚀 Buka http://localhost:9091 untuk mengakses UI."
