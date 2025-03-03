@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>V2Ray Monitor</title>
+    
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f4f7fc;
+        }
+        .container {
+            max-width: 800px;
+            margin-top: 30px;
+        }
+        .log-box {
+            background: #1e1e1e;
+            color: #0f0;
+            padding: 10px;
+            height: 200px;
+            overflow-y: auto;
+            border-radius: 5px;
+        }
+        .btn-custom {
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center text-success">V2Ray Monitor</h1>
+        <h5 class="text-center"><span id="models" class="badge bg-warning">Memuat...</span></h5>
+        <!-- Status -->
+        <div class="card my-3">
+            <div class="card-body text-center">
+                <h5>Status: <span id="status" class="badge bg-secondary">Memuat...</span></h5>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-success btn-custom" onclick="control('start')">Start</button>
+                    <button class="btn btn-danger btn-custom" onclick="control('stop')">Stop</button>
+                    <button class="btn btn-warning btn-custom" onclick="control('restart')">Restart</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Log -->
+        <div class="card my-3">
+            <div class="card-body">
+                <h5>Live Log</h5>
+                <pre class="log-box" id="log">🔄 Memuat log...</pre>
+            </div>
+        </div>
+
+        <!-- Telegram Config -->
+        <div class="card my-3">
+            <div class="card-body">
+                <h5>Pengaturan Telegram Bot</h5>
+                <div class="mb-2">
+                    <label for="botToken" class="form-label">Bot Token</label>
+                    <input type="text" id="botToken" class="form-control">
+                </div>
+                <div class="mb-2">
+                    <label for="chatId" class="form-label">Chat ID</label>
+                    <input type="text" id="chatId" class="form-control">
+                </div>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-primary btn-custom" onclick="updateBotConfig()">Simpan Pengaturan</button>
+                    <button class="btn btn-secondary btn-custom" onclick="sendTestMessage()">Kirim Pesan Uji</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="position-fixed top-0 end-0 p-3" style="z-index: 1050">
+        <div id="toastContainer"></div>
+    </div>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function showToast(message, type = "info") {
+            let toastId = `toast-${Date.now()}`;
+            let toastHtml = `
+                <div id="${toastId}" class="toast align-items-center text-bg-${type} border-0 show" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">${message}</div>
+                        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            `;
+
+            let toastContainer = document.getElementById("toastContainer");
+            let toastElement = document.createElement("div");
+            toastElement.innerHTML = toastHtml;
+            toastContainer.appendChild(toastElement);
+
+            let toast = new bootstrap.Toast(document.getElementById(toastId));
+            toast.show();
+
+            setTimeout(() => {
+                toastElement.remove();
+            }, 5000); // Toast hilang setelah 5 detik
+        }
+
+        function control(action) {
+            fetch(`/cgi-bin/${action}.sh`).then(response => response.text()).then(result => {
+                showToast(result, "success");
+                checkStatus();
+            }).catch(error => showToast("❌ Error: " + error, "danger"));
+        }
+
+        function checkStatus() {
+            fetch(`/cgi-bin/status.sh`).then(response => response.text()).then(status => {
+                document.getElementById("status").innerText = status;
+                document.getElementById("status").classList = status.includes("Running") ? "badge bg-success" : "badge bg-danger";
+            }).catch(error => {
+                document.getElementById("status").innerText = "Gagal";
+                document.getElementById("status").classList = "badge bg-warning";
+            });
+        }
+
+        function updateLog() {
+            fetch(`/cgi-bin/log.sh`).then(response => response.text()).then(logs => {
+                let logElement = document.getElementById("log");
+                logElement.innerText = logs;
+                logElement.scrollTop = logElement.scrollHeight;
+            }).catch(error => {
+                document.getElementById("log").innerText = "🚫 Gagal memuat log";
+            });
+        }
+
+        function updateBotConfig() {
+            const botToken = document.getElementById("botToken").value;
+            const chatId = document.getElementById("chatId").value;
+            fetch('/cgi-bin/update_env.sh', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ botToken, chatId })
+            }).then(response => response.text()).then(result => {
+                showToast(result, "success");
+            }).catch(error => showToast("❌ Error: " + error, "danger"));
+        }
+
+        function sendTestMessage() {
+            fetch('/cgi-bin/send_telegram_message.sh').then(response => response.json()).then(result => {
+                showToast(result.ok ? "✅ Pesan terkirim!" : "❌ Gagal mengirim pesan", result.ok ? "success" : "danger");
+            }).catch(error => showToast("🚫 Error: " + error, "danger"));
+        }
+
+        function loadBotConfig() {
+            fetch('/cgi-bin/get_bot_config.sh').then(response => response.json()).then(data => {
+                document.getElementById("botToken").value = data.botToken;
+                document.getElementById("chatId").value = data.chatId;
+                document.getElementById("models").innerText = data.hostname;
+            }).catch(error => showToast("❌ Gagal memuat pengaturan", "danger"));
+        }
+
+        setInterval(checkStatus, 5000);
+        setInterval(updateLog, 3000);
+        window.onload = () => {
+            checkStatus();
+            updateLog();
+            loadBotConfig();
+        };
+    </script>
+</body>
+</html>
