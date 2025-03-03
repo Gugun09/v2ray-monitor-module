@@ -4,7 +4,6 @@ PID_FILE="/data/local/tmp/v2ray_monitor.pid"
 LOG_FILE="/data/local/tmp/v2ray_monitor.log"
 LAST_STATUS_FILE="/data/local/tmp/v2ray_monitor_status"
 RESTART_COUNT_FILE="/data/local/tmp/v2ray_restart_count"
-LOCAL_DEVICES=$(ip neigh show | awk '/REACHABLE/ {print $1 " (" $5 ")"}')
 HOSTNAME=$(getprop ro.product.model)
 
 source /data/local/tmp/.env
@@ -83,6 +82,8 @@ monitor() {
 
     while true; do
         TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+
+        LOCAL_DEVICES=$(ip neigh show | awk '/REACHABLE/ {print $1 " (" $5 ")"}')
 
         # Cek koneksi menggunakan curl (dengan timeout lebih cepat)
         if su -c "curl --silent --fail --max-time 2 https://creativeservices.netflix.com" > /dev/null 2>&1; then
