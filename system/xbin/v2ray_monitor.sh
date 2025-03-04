@@ -20,7 +20,7 @@ get_public_ip() {
 }
 
 get_local_ip() {
-    ip -4 addr show rmnet_data3 | awk '/inet / {print $2}' | cut -d/ -f1 || echo "Tidak diketahui"
+    ip -4 addr show | awk '/inet / && !/127.0.0.1/ && !/tun0/ {print $2}' | cut -d/ -f1 | head -n 1
 }
 
 start() {
@@ -84,6 +84,7 @@ monitor() {
         TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
         LOCAL_DEVICES=$(ip neigh show | awk '/REACHABLE/ {print $1 " (" $5 ")"}')
+        GET_LOCAL_IP=$(ip -4 addr show | awk '/inet / && !/127.0.0.1/ && !/tun0/ {print $2}' | cut -d/ -f1 | head -n 1)
 
         # Cek koneksi menggunakan curl (dengan timeout lebih cepat)
         if su -c "curl --silent --fail --max-time 2 https://creativeservices.netflix.com" > /dev/null 2>&1; then
@@ -113,17 +114,19 @@ monitor() {
                 fi
 
                 PUBLIC_IP=$(get_public_ip)
-                LOCAL_IP=$(get_local_ip)
                 send_telegram "✅ V2Ray kembali online pada $TIMESTAMP.
 🌍 *IP Publik*: $PUBLIC_IP
-📶 *IP Lokal*: $LOCAL_IP
+📶 *IP Lokal*: $GET_LOCAL_IP
 ⏳ *Downtime*: $DURATION_HUMAN
 🔄 *Restart Hari Ini*: $(cat $RESTART_COUNT_FILE) kali
 --------------------------------
 📡 *Monitoring Koneksi*
 🤖 *Hostname Perangkat Ini:* $HOSTNAME
 🔍 *Perangkat yang terhubung ke WiFi:* 
-$LOCAL_DEVICES"
+$LOCAL_DEVICES
+--------------------------------
+🌐 *Akses UI*: [http://$GET_LOCAL_IP:9091](http://$GET_LOCAL_IP:9091)
+"
             fi
 
             LAST_STATUS="$CURRENT_STATUS"
