@@ -44,6 +44,16 @@
             </div>
         </div>
 
+        <div class="card my-3 shadow-sm">
+            <div class="card-body">
+                <h5>Cloudflare Tunnel</h5>
+                <div class="input-group">
+                    <input type="text" id="tunnelUrl" class="form-control" value="🔄 Menunggu URL..." readonly>
+                    <button class="btn btn-outline-primary" onclick="copyTunnelUrl()">Copy</button>
+                </div>
+            </div>
+        </div>             
+
         <!-- Log -->
         <div class="card my-3 shadow-sm">
             <div class="card-body">
@@ -71,6 +81,14 @@
             </div>
         </div>
     </div>
+    <footer class="text-center py-3 mt-4 bg-light">
+        <p class="mb-1">Dibuat oleh <strong id="devName">Memuat...</strong> | Cloudflare Tunnel & V2Ray Monitor</p>
+        <p class="mb-1">
+            Versi Aplikasi: <span id="appVersion" class="badge bg-primary">Memuat...</span> |
+            Versi Kode: <span id="codeVersion" class="badge bg-secondary">Memuat...</span>
+        </p>
+        <small class="text-muted">&copy; 2025 - Semua Hak Dilindungi</small>
+    </footer>    
 
     <!-- Toast Container -->
     <div class="position-fixed top-0 end-0 p-3" style="z-index: 1050">
@@ -150,11 +168,44 @@
         }
 
         function loadBotConfig() {
-            fetch('/cgi-bin/get_bot_config.sh').then(response => response.json()).then(data => {
-                document.getElementById("botToken").value = data.botToken;
-                document.getElementById("chatId").value = data.chatId;
-                document.getElementById("models").innerText = data.hostname;
-            }).catch(error => showToast("❌ Gagal memuat pengaturan", "danger"));
+            fetch('/cgi-bin/get_bot_config.sh')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById("botToken").value = data.botToken;
+                    document.getElementById("chatId").value = data.chatId;
+                    document.getElementById("models").innerText = data.hostname;
+
+                    let tunnelElement = document.getElementById("tunnelUrl");
+                    if (tunnelElement.tagName === "INPUT") {
+                        tunnelElement.value = data.tunnelUrl;
+                    } else {
+                        tunnelElement.innerText = data.tunnelUrl;
+                    }
+                })
+                .catch(error => showToast("❌ Gagal memuat pengaturan", "danger"));
+        }
+
+        function loadVersionInfo() {
+            fetch('/cgi-bin/get_version.sh')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById("devName").innerText = data.devName;
+                    document.getElementById("appVersion").innerText = data.appVersion;
+                    document.getElementById("codeVersion").innerText = data.codeVersion;
+                })
+                .catch(error => showToast("❌ Gagal memuat versi", "danger"));
+        }
+
+        function copyTunnelUrl() {
+            let tunnelInput = document.getElementById("tunnelUrl");
+            tunnelInput.select();
+            tunnelInput.setSelectionRange(0, 99999); // Untuk mendukung di mobile
+
+            navigator.clipboard.writeText(tunnelInput.value).then(() => {
+                showToast("📋 URL berhasil disalin!", "success");
+            }).catch(err => {
+                showToast("❌ Gagal menyalin URL", "danger");
+            });
         }
 
         setInterval(checkStatus, 5000);
@@ -163,6 +214,7 @@
             checkStatus();
             updateLog();
             loadBotConfig();
+            loadVersionInfo();
         };
     </script>
 </body>

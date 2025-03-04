@@ -14,6 +14,7 @@ fi
 botToken=$(grep TELEGRAM_BOT_TOKEN /data/local/tmp/.env | cut -d'=' -f2 | tr -d '"')
 chatId=$(grep TELEGRAM_CHAT_ID /data/local/tmp/.env | cut -d'=' -f2 | tr -d '"')
 HOSTNAME=$(getprop ro.product.model)
+TUNNEL_URL=$(grep -o 'https://[a-zA-Z0-9.-]*\.trycloudflare\.[a-zA-Z]*' /tmp/cloudflare_log.txt)
 
 # Periksa apakah variabel sudah terisi dengan benar
 if [[ -z "$botToken" || -z "$chatId" ]]; then
@@ -22,4 +23,5 @@ if [[ -z "$botToken" || -z "$chatId" ]]; then
 fi
 
 # Format output sebagai JSON
-echo "{\"botToken\": \"$botToken\", \"chatId\": \"$chatId\", \"hostname\": \"$HOSTNAME\"}"
+echo "{\"botToken\": \"$botToken\", \"chatId\": \"$chatId\", \"hostname\": \"$HOSTNAME\", \"tunnelUrl\": \"$TUNNEL_URL\"}"
+# Compare this snippet from ui/www/cgi-bin/start.sh:
