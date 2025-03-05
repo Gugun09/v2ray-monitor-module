@@ -17,6 +17,8 @@ fi
 
 # Beri izin eksekusi pada skrip
 chmod +x /data/adb/modules/v2ray_monitor/ui/start_server.sh
+chmod +x /data/adb/modules/v2ray_monitor/ui/stop_server.sh
+chmod +x /data/adb/modules/v2ray_monitor/ui/www/cgi-bin/*
 
 # Delay untuk memastikan sistem stabil
 sleep 10

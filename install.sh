@@ -53,12 +53,11 @@ if [ "$DOWNLOAD" -eq 1 ]; then
 fi
 
 # Bersihkan direktori lama dan buat ulang
-rm -rf "$MODDIR"
 mkdir -p "$MODDIR"
 
 # Ekstrak semua file langsung ke `MODDIR/`
 ui_print "📂 Mengekstrak modul..."
-unzip -o "$TMP_ZIP" -d "$MODDIR" >&2
+unzip -o "$TMP_ZIP" -d "$MODDIR"
 
 # Pastikan semua file memiliki izin yang benar
 ui_print "⚙️ Menyetel izin file..."
