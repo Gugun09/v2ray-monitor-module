@@ -12,7 +12,7 @@ TMP_ZIP="/data/local/tmp/v2ray_monitor_module.zip"
 GITHUB_URL="https://github.com/gugun09/v2ray-monitor-module/releases/latest/download/v2ray_monitor_module.zip"
 
 ui_print "********************************************"
-ui_print "  V2Ray Monitor Module Installer  "
+ui_print "  V2Ray Monitor Module Installer v1.0.0 "
 ui_print "********************************************"
 
 # Menampilkan pilihan input volume
@@ -56,27 +56,13 @@ fi
 rm -rf "$MODDIR"
 mkdir -p "$MODDIR"
 
-# Ekstrak file ZIP ke dalam modul
+# Ekstrak semua file langsung ke `MODDIR/`
 ui_print "📂 Mengekstrak modul..."
 unzip -o "$TMP_ZIP" -d "$MODDIR" >&2
 
-# **PENTING**: Jangan menyalin langsung ke /system, biarkan KernelSU me-mount
-ui_print "📂 Menyimpan file ke direktori modul..."
-mkdir -p "$MODDIR/system/xbin"
-mv "$MODDIR/v2ray_monitor.sh" "$MODDIR/system/xbin/"
-mv "$MODDIR/v2ray_monitor_service" "$MODDIR/system/xbin/"
-chmod 755 "$MODDIR/system/xbin/v2ray_monitor.sh" "$MODDIR/system/xbin/v2ray_monitor_service"
-
-# Menyalin service.sh ke direktori service.d
-SERVICE_DIR="/data/adb/service.d"
-mkdir -p "$SERVICE_DIR"
-cp "$MODDIR/service.sh" "$SERVICE_DIR/"
-chmod 755 "$SERVICE_DIR/service.sh"
-
-# Pastikan KernelSU mengenali file dengan izin yang tepat
+# Pastikan semua file memiliki izin yang benar
 ui_print "⚙️ Menyetel izin file..."
 set_perm_recursive $MODDIR 0 0 0755 0644
-set_perm $SERVICE_DIR/service.sh 0 0 0755
 
 ui_print "✅ Instalasi selesai!"
 ui_print "🔄 Reboot untuk menerapkan perubahan."
