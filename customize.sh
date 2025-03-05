@@ -1,11 +1,5 @@
 #!/system/bin/sh
 
-# Konfigurasi KernelSU
-SKIPMOUNT=false
-PROPFILE=true
-POSTFSDATA=false
-LATESTARTSERVICE=true
-
 # Direktori dan URL
 MODDIR="/data/adb/modules/v2ray_monitor"
 TMP_ZIP="/data/local/tmp/v2ray_monitor_module.zip"
@@ -51,9 +45,6 @@ if [ "$DOWNLOAD" -eq 1 ]; then
     DOWNLOAD=0
   fi
 fi
-
-# Bersihkan direktori lama dan buat ulang
-mkdir -p "$MODDIR"
 
 # Ekstrak semua file langsung ke `MODDIR/`
 ui_print "📂 Mengekstrak modul..."
