@@ -1,8 +1,7 @@
 #!/system/bin/sh
 
 # Variabel Telegram Bot dan Chat ID
-TELEGRAM_BOT_TOKEN="7544147318:AAHaEPqtwH0TmW4jao8lspNy-r8EZu2ty8Y"
-TELEGRAM_CHAT_ID="5946382727"
+source /data/local/tmp/.env
 PID_FILE="/tmp/cloudflared.pid"
 
 # Fungsi untuk mengirim pesan ke Telegram
