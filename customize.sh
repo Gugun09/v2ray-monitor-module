@@ -50,6 +50,9 @@ fi
 ui_print "📂 Mengekstrak modul..."
 unzip -o "$TMP_ZIP" -d "$MODDIR"
 
+# Hapus file ZIP sementara
+rm -f "$TMP_ZIP"
+
 # Pastikan semua file memiliki izin yang benar
 ui_print "⚙️ Menyetel izin file..."
 set_perm_recursive $MODDIR 0 0 0755 0644
