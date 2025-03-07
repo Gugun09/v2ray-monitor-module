@@ -44,6 +44,17 @@
             </div>
         </div>
 
+        <!-- Status USB Tethering -->
+        <div class="card my-3 shadow-sm">
+            <div class="card-body text-center">
+                <h5>USB Tethering: <span id="usbStatus" class="badge bg-secondary">Memuat...</span></h5>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-success btn-custom" onclick="tetherControl('start')">Start USB Tethering</button>
+                    <button class="btn btn-danger btn-custom" onclick="tetherControl('stop')">Stop USB Tethering</button>
+                </div>
+            </div>
+        </div>
+
         <div class="card my-3 shadow-sm">
             <div class="card-body">
                 <h5>Cloudflare Tunnel</h5>
@@ -129,6 +140,30 @@
             }).catch(error => showToast("❌ Error: " + error, "danger"));
         }
 
+        function tetherControl(action) {
+            fetch(`/cgi-bin/usb_tether.sh?action=${action}`)
+                .then(response => response.text())
+                .then(result => {
+                    showToast(result, "success");
+                    checkUsbStatus();
+                })
+                .catch(error => showToast("❌ Error: " + error, "danger"));
+        }
+
+        function checkUsbStatus() {
+            fetch(`/cgi-bin/status_usb.sh`)
+                .then(response => response.text())
+                .then(status => {
+                    let statusElement = document.getElementById("usbStatus");
+                    statusElement.innerText = status.includes("enabled") ? "Aktif" : "Nonaktif";
+                    statusElement.classList = status.includes("enabled") ? "badge bg-success" : "badge bg-danger";
+                })
+                .catch(error => {
+                    document.getElementById("usbStatus").innerText = "Gagal";
+                    document.getElementById("usbStatus").classList = "badge bg-warning";
+                });
+        }
+
         function checkStatus() {
             fetch(`/cgi-bin/status.sh`).then(response => response.text()).then(status => {
                 document.getElementById("status").innerText = status;
@@ -209,12 +244,14 @@
         }
 
         setInterval(checkStatus, 5000);
+        setInterval(checkUsbStatus, 5000);
         setInterval(updateLog, 3000);
         window.onload = () => {
             checkStatus();
             updateLog();
             loadBotConfig();
             loadVersionInfo();
+            checkUsbStatus();
         };
     </script>
 </body>
