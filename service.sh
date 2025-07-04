@@ -20,15 +20,14 @@ chmod +x /data/adb/modules/v2ray_monitor/ui/start_server.sh
 chmod +x /data/adb/modules/v2ray_monitor/ui/stop_server.sh
 chmod +x /data/adb/modules/v2ray_monitor/ui/www/cgi-bin/*
 
-# Delay untuk memastikan sistem stabil
-sleep 10
+# Jalankan monitoring service hanya jika belum berjalan
+if [ ! -f /data/local/tmp/v2ray_monitor.pid ]; then
+    /system/xbin/v2ray_monitor_service start
+fi
 
-# Jalankan server UI di background
-sh /data/adb/modules/v2ray_monitor/ui/start_server.sh &
-if [ $? -eq 0 ]; then
-    echo "✅ Server dimulai dengan sukses."
-else
-    echo "❌ Gagal menjalankan server."
+# Jalankan server UI hanya jika belum berjalan
+if ! pgrep -f "busybox httpd.*9091" > /dev/null; then
+    sh /data/adb/modules/v2ray_monitor/ui/start_server.sh &
 fi
 
 # Menunggu proses untuk memastikan semuanya berjalan

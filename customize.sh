@@ -18,16 +18,16 @@ START_TIME=$(date +%s)
 while true; do
   NOW_TIME=$(date +%s)
   timeout 1 getevent -lc 1 2>&1 | grep KEY_VOLUME > "$TMPDIR/events"
-  
+
   if [ $(( NOW_TIME - START_TIME )) -gt 9 ]; then
     ui_print "- Tidak ada input dalam 10 detik, langsung ekstrak file ZIP."
     DOWNLOAD=0
     break
-  elif $(cat $TMPDIR/events | grep -q KEY_VOLUMEUP); then
+  elif cat $TMPDIR/events | grep -q KEY_VOLUMEUP; then
     DOWNLOAD=1
     ui_print "- Memulai download modul terbaru dari GitHub..."
     break
-  elif $(cat $TMPDIR/events | grep -q KEY_VOLUMEDOWN); then
+  elif cat $TMPDIR/events | grep -q KEY_VOLUMEDOWN; then
     DOWNLOAD=0
     ui_print "- Mengabaikan download, langsung ekstrak file ZIP yang ada."
     break

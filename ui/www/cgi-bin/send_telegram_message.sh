@@ -4,29 +4,19 @@
 echo "Content-Type: application/json"
 echo ""
 
-# Pastikan file .env ada
-if [[ ! -f /data/local/tmp/.env ]]; then
-    echo '{"error": "File .env tidak ditemukan"}'
-    exit 1
-fi
+# Source utilitas
+. /data/adb/modules/v2ray_monitor/ui/www/cgi-bin/env_utils.sh
+. /data/adb/modules/v2ray_monitor/ui/www/cgi-bin/telegram_utils.sh
 
-# Ambil nilai dari file .env
-botToken=$(grep TELEGRAM_BOT_TOKEN /data/local/tmp/.env | cut -d'=' -f2 | tr -d '"')
-chatId=$(grep TELEGRAM_CHAT_ID /data/local/tmp/.env | cut -d'=' -f2 | tr -d '"')
-
-# Periksa apakah variabel sudah terisi
-if [[ -z "$botToken" || -z "$chatId" ]]; then
-    echo '{"error": "Bot Token atau Chat ID tidak ditemukan"}'
-    exit 1
-fi
+parse_env
 
 # Pesan yang akan dikirim
 message="🔔 Tes pesan dari V2Ray Monitor"
 
 # Kirim pesan ke Telegram
-response=$(curl -s -X POST "https://api.telegram.org/bot$botToken/sendMessage" \
-    -H "Content-Type: application/json" \
-    -d "{\"chat_id\": \"$chatId\", \"text\": \"$message\"}")
-
-# Tampilkan respons dari Telegram
-echo "$response"
+send_telegram "$message"
+if [ $? -eq 0 ]; then
+    echo '{"ok": true, "message": "Pesan terkirim"}'
+else
+    echo '{"ok": false, "error": "Gagal mengirim pesan"}'
+fi

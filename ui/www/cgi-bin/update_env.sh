@@ -4,9 +4,14 @@
 echo "Content-Type: application/json"
 echo ""
 
-# Pastikan file .env ada atau buat baru jika tidak ada
+# Path .env sebagai variabel global
 env_file="/data/local/tmp/.env"
-if [[ ! -f "$env_file" ]]; then
+
+# Source utilitas
+. /data/adb/modules/v2ray_monitor/ui/www/cgi-bin/env_utils.sh
+
+# Pastikan file .env ada atau buat baru jika tidak ada
+if [ ! -f "$env_file" ]; then
     touch "$env_file"
 fi
 
@@ -18,7 +23,7 @@ botToken=$(echo "$input_json" | grep -o '"botToken": *"[^"]*"' | cut -d'"' -f4)
 chatId=$(echo "$input_json" | grep -o '"chatId": *"[^"]*"' | cut -d'"' -f4)
 
 # Validasi input
-if [[ -z "$botToken" || -z "$chatId" ]]; then
+if [ -z "$botToken" ] || [ -z "$chatId" ]; then
     echo '{"error": "Bot Token atau Chat ID tidak boleh kosong"}'
     exit 1
 fi

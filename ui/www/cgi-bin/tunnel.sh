@@ -1,16 +1,13 @@
 #!/system/bin/sh
 
-# Variabel Telegram Bot dan Chat ID
-source /data/local/tmp/.env
-PID_FILE="/tmp/cloudflared.pid"
+# Source utilitas
+. /data/adb/modules/v2ray_monitor/ui/www/cgi-bin/env_utils.sh
+. /data/adb/modules/v2ray_monitor/ui/www/cgi-bin/telegram_utils.sh
 
-# Fungsi untuk mengirim pesan ke Telegram
-send_telegram() {
-    MESSAGE="$1"
-    curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
-        -d chat_id="$TELEGRAM_CHAT_ID" \
-        -d text="$MESSAGE" > /dev/null
-}
+parse_env
+
+PID_FILE="/tmp/cloudflared.pid"
+CLOUDFLARED_BIN="/system/xbin/cloudflared"
 
 # Fungsi untuk menghentikan tunnel
 stop_tunnel() {
@@ -30,8 +27,13 @@ stop_tunnel() {
 
 # Fungsi untuk memulai tunnel
 start_tunnel() {
+    if [ ! -x "$CLOUDFLARED_BIN" ]; then
+        send_telegram "Cloudflare Tunnel TIDAK dijalankan karena cloudflared tidak ditemukan di $CLOUDFLARED_BIN."
+        echo "cloudflared tidak ditemukan di $CLOUDFLARED_BIN, tunnel tidak dijalankan."
+        exit 0
+    fi
     # Jalankan Cloudflare Tunnel di background dan simpan output ke file log
-    /data/data/com.termux/files/usr/bin/cloudflared tunnel --url http://localhost:9091 > /tmp/cloudflare_log.txt 2>&1 &
+    "$CLOUDFLARED_BIN" tunnel --url http://localhost:9091 > /tmp/cloudflare_log.txt 2>&1 &
 
     # Simpan PID dari cloudflared ke file
     echo $! > "$PID_FILE"

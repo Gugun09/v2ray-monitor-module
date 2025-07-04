@@ -1,19 +1,16 @@
 #!/system/bin/sh
 
+# Path penting sebagai variabel global
 PID_FILE="/data/local/tmp/v2ray_monitor.pid"
 LOG_FILE="/data/local/tmp/v2ray_monitor.log"
 LAST_STATUS_FILE="/data/local/tmp/v2ray_monitor_status"
 RESTART_COUNT_FILE="/data/local/tmp/v2ray_restart_count"
 HOSTNAME=$(getprop ro.product.model)
 
-source /data/local/tmp/.env
-
-send_telegram() {
-    MESSAGE="$1"
-    curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
-        -d chat_id="$TELEGRAM_CHAT_ID" \
-        -d text="$MESSAGE" > /dev/null
-}
+# Source utilitas
+. /data/adb/modules/v2ray_monitor/ui/www/cgi-bin/env_utils.sh
+. /data/adb/modules/v2ray_monitor/ui/www/cgi-bin/telegram_utils.sh
+parse_env
 
 get_public_ip() {
     curl -s https://api64.ipify.org || echo "Tidak diketahui"
@@ -143,6 +140,11 @@ $LOCAL_DEVICES
                 RETRY_COUNT=0  # Reset retry count
             elif [ "$RETRY_COUNT" -ge "$MAX_RETRY" ]; then
                 echo "[$TIMESTAMP] 🔄 Mencoba mengaktifkan ulang V2Ray..." | tee -a "$LOG_FILE"
+
+                # Bangunkan layar jika sleep
+                su -c "input keyevent 26"
+                su -c "input keyevent 82"
+                sleep 1
 
                 RESTART_COUNT=$(cat "$RESTART_COUNT_FILE")
                 echo $((RESTART_COUNT + 1)) > "$RESTART_COUNT_FILE"
