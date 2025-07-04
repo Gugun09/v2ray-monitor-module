@@ -2,6 +2,6 @@
     "version": "1.0.2",
     "versionCode": 2,
     "zipUrl": "https://github.com/gugun09/v2ray-monitor-module/releases/latest/download/v2ray_monitor_module.zip",
-    "changelog": "🔄 Perbaikan bug dan peningkatan performa.",
+    "changelog": "https://github.com/Gugun09/v2ray-monitor-module/raw/main/CHANGELOG.md",
     "supportUrl": "https://github.com/gugun09/v2ray-monitor-module"
 }  

@@ -4,9 +4,17 @@
 echo "Content-Type: text/plain"
 echo ""
 
-url=$(echo "$QUERY_STRING" | sed -n 's/^url=//p')
+# Debug: print QUERY_STRING ke stderr
+# echo "QUERY_STRING: $QUERY_STRING" >&2
+
+# Ambil url dari query string, decode %3A dan %2F
+url=$(echo "$QUERY_STRING" | grep -oE 'url=[^&]*' | cut -d= -f2- | sed 's/%3A/:/g;s/%2F/\//g')
 if [ -z "$url" ]; then
     echo "URL update tidak ditemukan!"
+    exit 1
+fi
+if ! echo "$url" | grep -q '^http'; then
+    echo "URL update tidak valid: $url"
     exit 1
 fi
 TMP_ZIP="/data/local/tmp/v2ray_monitor_module_update.zip"
