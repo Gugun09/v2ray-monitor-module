@@ -1,11 +1,21 @@
 #!/system/bin/sh
 
+# Cek ketersediaan binary penting
+for bin in curl am input awk cut head ps grep su; do
+    command -v $bin >/dev/null 2>&1 || { echo "$bin tidak ditemukan!"; exit 1; }
+done
+
 # Path penting sebagai variabel global
 PID_FILE="/data/local/tmp/v2ray_monitor.pid"
 LOG_FILE="/data/local/tmp/v2ray_monitor.log"
 LAST_STATUS_FILE="/data/local/tmp/v2ray_monitor_status"
 RESTART_COUNT_FILE="/data/local/tmp/v2ray_restart_count"
 HOSTNAME=$(getprop ro.product.model)
+
+# Pastikan file penting bisa dibuat
+: > "$LOG_FILE"
+: > "$RESTART_COUNT_FILE"
+: > "$LAST_STATUS_FILE"
 
 # Source utilitas
 . /data/adb/modules/v2ray_monitor/ui/www/cgi-bin/env_utils.sh
@@ -111,19 +121,11 @@ monitor() {
                 fi
 
                 PUBLIC_IP=$(get_public_ip)
-                send_telegram "✅ V2Ray kembali online pada $TIMESTAMP.
-🌍 *IP Publik*: $PUBLIC_IP
-📶 *IP Lokal*: $GET_LOCAL_IP
-⏳ *Downtime*: $DURATION_HUMAN
-🔄 *Restart Hari Ini*: $(cat $RESTART_COUNT_FILE) kali
---------------------------------
-📡 *Monitoring Koneksi*
-🤖 *Hostname Perangkat Ini:* $HOSTNAME
-🔍 *Perangkat yang terhubung ke WiFi:* 
-$LOCAL_DEVICES
---------------------------------
-🌐 *Akses UI*: [http://$GET_LOCAL_IP:9091](http://$GET_LOCAL_IP:9091)
-"
+                MSG="✅ V2Ray kembali online pada $TIMESTAMP.\n🌍 *IP Publik*: $PUBLIC_IP\n📶 *IP Lokal*: $GET_LOCAL_IP\n⏳ *Downtime*: $DURATION_HUMAN\n🔄 *Restart Hari Ini*: $(cat $RESTART_COUNT_FILE) kali\n--------------------------------\n📡 *Monitoring Koneksi*\n🤖 *Hostname Perangkat Ini:* $HOSTNAME\n🔍 *Perangkat yang terhubung ke WiFi:* \n$LOCAL_DEVICES\n--------------------------------\n🌐 *Akses UI*: [http://$GET_LOCAL_IP:9091](http://$GET_LOCAL_IP:9091)\n"
+                if ! send_telegram "$MSG"; then
+                    echo "[$TIMESTAMP] Gagal kirim notifikasi Telegram" >> "$LOG_FILE"
+                fi
+                DOWNTIME_START="" # Reset setelah online
             fi
 
             LAST_STATUS="$CURRENT_STATUS"
