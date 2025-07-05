@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.3] - 2024-07-05
+### Changed
+- Perbaikan robust Cloudflare Tunnel (hapus URL saat stop)
+- Pengecekan status layar sebelum automasi
+- Update UI dan script agar lebih profesional dan tahan error
+- Fitur update otomatis dan notifikasi lebih baik
+
 ## [1.2.0] - 2024-06-10
 ### Added
 - Fitur update otomatis dari UI

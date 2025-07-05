@@ -23,6 +23,8 @@ stop_tunnel() {
     else
         send_telegram "Tidak ada file PID yang ditemukan. Tunnel mungkin belum dijalankan."
     fi
+    # Hapus log tunnel agar URL tidak tampil di web
+    rm -f /tmp/cloudflare_log.txt
 }
 
 # Fungsi untuk memulai tunnel
@@ -65,10 +67,21 @@ start_tunnel() {
     fi
 }
 
-# Cek parameter untuk start atau stop
-if [ "$1" == "stop" ]; then
+# Support CGI (QUERY_STRING) dan argumen langsung
+ACTION=""
+
+# Cek dari argumen
+if [ -n "$1" ]; then
+    ACTION="$1"
+# Cek dari QUERY_STRING (CGI)
+elif [ -n "$QUERY_STRING" ]; then
+    # Ambil parameter sebelum '=' jika ada, atau seluruh string
+    ACTION=$(echo "$QUERY_STRING" | cut -d'=' -f1)
+fi
+
+if [ "$ACTION" = "stop" ]; then
     stop_tunnel
-elif [ "$1" == "start" ]; then
+elif [ "$ACTION" = "start" ]; then
     start_tunnel
 else
     echo "Usage: $0 {start|stop}"

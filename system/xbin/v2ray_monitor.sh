@@ -30,6 +30,11 @@ get_local_ip() {
     ip -4 addr show | awk '/inet / && !/127.0.0.1/ && !/tun0/ {print $2}' | cut -d/ -f1 | head -n 1
 }
 
+# Fungsi cek status layar
+is_screen_on() {
+    su -c 'dumpsys power | grep "Display Power" | grep -q "state=ON"'
+}
+
 start() {
     if [ -f "$PID_FILE" ]; then
         PID=$(cat "$PID_FILE")
@@ -143,8 +148,11 @@ monitor() {
             elif [ "$RETRY_COUNT" -ge "$MAX_RETRY" ]; then
                 echo "[$TIMESTAMP] 🔄 Mencoba mengaktifkan ulang V2Ray..." | tee -a "$LOG_FILE"
 
-                # Bangunkan layar jika sleep
-                su -c "input keyevent 26"
+                # Bangunkan layar hanya jika sleep
+                if ! is_screen_on; then
+                    su -c "input keyevent 26"
+                    sleep 1
+                fi
                 su -c "input keyevent 82"
                 sleep 1
 
