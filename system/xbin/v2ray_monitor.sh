@@ -23,7 +23,7 @@ HOSTNAME=$(getprop ro.product.model)
 parse_env
 
 get_public_ip() {
-    curl -s https://api64.ipify.org || echo "Tidak diketahui"
+    timeout 5 curl -s --connect-timeout 2 --max-time 3 https://api64.ipify.org || echo "Tidak diketahui"
 }
 
 get_local_ip() {
@@ -90,7 +90,8 @@ monitor() {
     LAST_STATUS=""
     DOWNTIME_START=""
     RETRY_COUNT=0
-    MAX_RETRY=3
+    MAX_RETRY=2
+    CHECK_INTERVAL=3
 
     while true; do
         TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
@@ -98,8 +99,8 @@ monitor() {
         LOCAL_DEVICES=$(ip neigh show | awk '/REACHABLE/ {print $1 " (" $5 ")"}')
         GET_LOCAL_IP=$(ip -4 addr show | awk '/inet / && !/127.0.0.1/ && !/tun0/ {print $2}' | cut -d/ -f1 | head -n 1)
 
-        # Cek koneksi menggunakan curl (dengan timeout lebih cepat)
-        if su -c "curl --silent --fail --max-time 2 https://creativeservices.netflix.com" > /dev/null 2>&1; then
+        # Cek koneksi menggunakan curl dengan timeout sangat singkat
+        if su -c "timeout 3 curl --silent --fail --connect-timeout 1 --max-time 2 https://1.1.1.1" > /dev/null 2>&1; then
             CURRENT_STATUS="VPN TERHUBUNG"
         else
             CURRENT_STATUS="VPN TIDAK TERHUBUNG"
@@ -139,10 +140,11 @@ monitor() {
         # Jika tidak terhubung, lakukan retry sebelum restart
         if [ "$CURRENT_STATUS" = "VPN TIDAK TERHUBUNG" ]; then
             RETRY_COUNT=$((RETRY_COUNT + 1))
-            echo "[$TIMESTAMP] ❌ Koneksi gagal ($RETRY_COUNT/$MAX_RETRY). Menunggu 2 detik..." | tee -a "$LOG_FILE"
-            sleep 2
+            echo "[$TIMESTAMP] ❌ Koneksi gagal ($RETRY_COUNT/$MAX_RETRY). Menunggu $CHECK_INTERVAL detik..." | tee -a "$LOG_FILE"
+            sleep $CHECK_INTERVAL
 
-            if su -c "curl --silent --fail --max-time 2 https://creativeservices.netflix.com" > /dev/null 2>&1; then
+            # Cek ulang dengan timeout singkat
+            if su -c "timeout 2 curl --silent --fail --connect-timeout 1 --max-time 1 https://1.1.1.1" > /dev/null 2>&1; then
                 echo "[$TIMESTAMP] ✅ Koneksi kembali normal tanpa restart." | tee -a "$LOG_FILE"
                 RETRY_COUNT=0  # Reset retry count
             elif [ "$RETRY_COUNT" -ge "$MAX_RETRY" ]; then
@@ -170,9 +172,10 @@ monitor() {
 
                 RETRY_COUNT=0  # Reset retry count setelah restart
             fi
+        else
+            # Jika koneksi normal, tunggu lebih lama sebelum cek berikutnya
+            sleep 8
         fi
-
-        sleep 5
     done
 }
 
