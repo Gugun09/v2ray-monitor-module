@@ -105,7 +105,7 @@ jobs:
           sed -i "s/^versionCode=.*/versionCode=${{ steps.version.outputs.version_code }}/" module.prop
           
           # Update update.json
-          cat > update.json << EOF
+          cat > update.json << 'EOF'
           {
               "version": "${{ steps.version.outputs.version }}",
               "versionCode": ${{ steps.version.outputs.version_code }},
@@ -315,7 +315,7 @@ jobs:
       - name: 🔄 Update Repository Files
         run: |
           # Update update.json in repository
-          cat > update.json << EOF
+          cat > update.json << 'EOF'
           {
               "version": "${{ needs.build.outputs.version }}",
               "versionCode": ${{ needs.build.outputs.version_code }},
