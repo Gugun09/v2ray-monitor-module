@@ -184,23 +184,41 @@ set_permissions() {
     # Set file permissions
     find "$MODDIR" -type f -exec chmod 644 {} \; 2>/dev/null
     
-    # Set executable permissions for scripts
-    local scripts=(
-        "$MODDIR/service.sh"
-        "$MODDIR/customize.sh"
-        "$MODDIR/uninstall.sh"
-        "$MODDIR/system/xbin/v2ray_monitor.sh"
-        "$MODDIR/system/xbin/v2ray_monitor_service"
-        "$MODDIR/ui/start_server.sh"
-        "$MODDIR/ui/stop_server.sh"
-    )
+    # Set executable permissions for scripts - FIXED SYNTAX
+    if [ -f "$MODDIR/service.sh" ]; then
+        chmod +x "$MODDIR/service.sh" 2>/dev/null
+        install_log "Set executable: $MODDIR/service.sh"
+    fi
     
-    for script in "${scripts[@]}"; do
-        if [ -f "$script" ]; then
-            chmod +x "$script" 2>/dev/null
-            install_log "Set executable: $script"
-        fi
-    done
+    if [ -f "$MODDIR/customize.sh" ]; then
+        chmod +x "$MODDIR/customize.sh" 2>/dev/null
+        install_log "Set executable: $MODDIR/customize.sh"
+    fi
+    
+    if [ -f "$MODDIR/uninstall.sh" ]; then
+        chmod +x "$MODDIR/uninstall.sh" 2>/dev/null
+        install_log "Set executable: $MODDIR/uninstall.sh"
+    fi
+    
+    if [ -f "$MODDIR/system/xbin/v2ray_monitor.sh" ]; then
+        chmod +x "$MODDIR/system/xbin/v2ray_monitor.sh" 2>/dev/null
+        install_log "Set executable: $MODDIR/system/xbin/v2ray_monitor.sh"
+    fi
+    
+    if [ -f "$MODDIR/system/xbin/v2ray_monitor_service" ]; then
+        chmod +x "$MODDIR/system/xbin/v2ray_monitor_service" 2>/dev/null
+        install_log "Set executable: $MODDIR/system/xbin/v2ray_monitor_service"
+    fi
+    
+    if [ -f "$MODDIR/ui/start_server.sh" ]; then
+        chmod +x "$MODDIR/ui/start_server.sh" 2>/dev/null
+        install_log "Set executable: $MODDIR/ui/start_server.sh"
+    fi
+    
+    if [ -f "$MODDIR/ui/stop_server.sh" ]; then
+        chmod +x "$MODDIR/ui/stop_server.sh" 2>/dev/null
+        install_log "Set executable: $MODDIR/ui/stop_server.sh"
+    fi
     
     # Set executable permissions for CGI scripts
     if [ -d "$MODDIR/ui/www/cgi-bin" ]; then
@@ -215,21 +233,32 @@ set_permissions() {
 verify_installation() {
     ui_print "🔍 Verifying installation..."
     
-    local required_files=(
-        "$MODDIR/module.prop"
-        "$MODDIR/service.sh"
-        "$MODDIR/system/xbin/v2ray_monitor.sh"
-        "$MODDIR/ui/www/index.html"
-        "$MODDIR/ui/www/js/app.js"
-    )
-    
     local missing_files=0
-    for file in "${required_files[@]}"; do
-        if [ ! -f "$file" ]; then
-            ui_print "❌ Missing required file: $file"
-            missing_files=$((missing_files + 1))
-        fi
-    done
+    
+    if [ ! -f "$MODDIR/module.prop" ]; then
+        ui_print "❌ Missing required file: $MODDIR/module.prop"
+        missing_files=$((missing_files + 1))
+    fi
+    
+    if [ ! -f "$MODDIR/service.sh" ]; then
+        ui_print "❌ Missing required file: $MODDIR/service.sh"
+        missing_files=$((missing_files + 1))
+    fi
+    
+    if [ ! -f "$MODDIR/system/xbin/v2ray_monitor.sh" ]; then
+        ui_print "❌ Missing required file: $MODDIR/system/xbin/v2ray_monitor.sh"
+        missing_files=$((missing_files + 1))
+    fi
+    
+    if [ ! -f "$MODDIR/ui/www/index.html" ]; then
+        ui_print "❌ Missing required file: $MODDIR/ui/www/index.html"
+        missing_files=$((missing_files + 1))
+    fi
+    
+    if [ ! -f "$MODDIR/ui/www/js/app.js" ]; then
+        ui_print "❌ Missing required file: $MODDIR/ui/www/js/app.js"
+        missing_files=$((missing_files + 1))
+    fi
     
     if [ $missing_files -gt 0 ]; then
         ui_print "❌ Installation verification failed: $missing_files missing files"
