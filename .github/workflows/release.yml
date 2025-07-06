@@ -1,44 +1,27 @@
-name: 🚀 Build and Release V2Ray Monitor Module
+---
+name: 🚀 Release V2Ray Monitor Module
 
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - 'v*'
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version (e.g., v1.0.4)'
+        description: 'Version (e.g., v1.0.4)'
         required: true
         default: 'v1.0.4'
-      prerelease:
-        description: 'Mark as pre-release'
-        required: false
-        default: false
-        type: boolean
-
-env:
-  MODULE_NAME: v2ray_monitor
-  RELEASE_NAME: v2ray-monitor-module
 
 jobs:
-  build:
-    name: 🔨 Build Module Package
+  release:
+    name: Build and Release
     runs-on: ubuntu-latest
     
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      version_code: ${{ steps.version.outputs.version_code }}
-      tag: ${{ steps.version.outputs.tag }}
-      release_notes: ${{ steps.release_notes.outputs.notes }}
-      package_size: ${{ steps.package.outputs.size }}
-      
     steps:
-      - name: 📥 Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: 🏷️ Extract Version Information
+      - name: Get Version
         id: version
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
@@ -46,140 +29,88 @@ jobs:
           else
             VERSION="${GITHUB_REF#refs/tags/}"
           fi
-          
-          VERSION_CLEAN=${VERSION#v}
-          VERSION_CODE=$(echo $VERSION_CLEAN | sed 's/\.//g')
-          
-          echo "version=$VERSION_CLEAN" >> $GITHUB_OUTPUT
-          echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
+          echo "version=${VERSION#v}" >> $GITHUB_OUTPUT
           echo "tag=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: 📝 Generate Release Notes
-        id: release_notes
+      - name: Update Files
         run: |
-          if [[ -f "CHANGELOG.md" ]]; then
-            NOTES=$(awk '/^## \['"${{ steps.version.outputs.version }}"'\]/{flag=1; next} /^## \[/{flag=0} flag' CHANGELOG.md)
-            
-            if [[ -z "$NOTES" ]]; then
-              NOTES="### Release ${{ steps.version.outputs.version }}\n\n- Bug fixes\n- Improvements"
-            fi
-          else
-            NOTES="Release ${{ steps.version.outputs.version }}"
-          fi
-          
-          {
-            echo 'notes<<EOF'
-            echo -e "$NOTES"
-            echo 'EOF'
-          } >> $GITHUB_OUTPUT
-
-      - name: 🔧 Update Module Properties
-        run: |
+          # Update module.prop
           sed -i "s/^version=.*/version=${{ steps.version.outputs.version }}/" module.prop
-          sed -i "s/^versionCode=.*/versionCode=${{ steps.version.outputs.version_code }}/" module.prop
           
-          cat > update.json <<EOF
+          # Update version in scripts
+          sed -i "s/v[0-9]\+\.[0-9]\+\.[0-9]\+/v${{ steps.version.outputs.version }}/g" customize.sh
+          
+          # Update get_version.sh
+          sed -i "s/\"appVersion\": \"[^\"]*\"/\"appVersion\": \"${{ steps.version.outputs.version }}\"/g" ui/www/cgi-bin/get_version.sh
+          
+          # Update update.json
+          cat > update.json << EOF
           {
             "version": "${{ steps.version.outputs.version }}",
-            "versionCode": ${{ steps.version.outputs.version_code }},
-            "zipUrl": "https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/${{ env.RELEASE_NAME }}.zip",
+            "versionCode": $(echo "${{ steps.version.outputs.version }}" | tr -d '.'),
+            "zipUrl": "https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/v2ray-monitor-module.zip",
             "changelog": "https://github.com/${{ github.repository }}/raw/main/CHANGELOG.md"
           }
           EOF
 
-      - name: 🗜️ Create Module Package
-        id: package
+      - name: Create Package
         run: |
-          mkdir -p build
-          cp -r module.prop service.sh customize.sh uninstall.sh system/ ui/ .env-example README.md CHANGELOG.md update.json build/
-          cd build
-          zip -r "../${{ env.RELEASE_NAME }}.zip" . -x "*.git*" "*.github*"
+          mkdir package
+          cp -r \
+            module.prop \
+            service.sh \
+            customize.sh \
+            uninstall.sh \
+            system/ \
+            ui/ \
+            .env-example \
+            README.md \
+            CHANGELOG.md \
+            update.json \
+            package/
+          
+          cd package
+          zip -r ../v2ray-monitor-module.zip .
           cd ..
-          PACKAGE_SIZE=$(du -h "${{ env.RELEASE_NAME }}.zip" | cut -f1)
-          echo "size=$PACKAGE_SIZE" >> $GITHUB_OUTPUT
 
-      - name: 🔍 Validate Package Structure
-        run: |
-          mkdir -p validate
-          unzip -q "${{ env.RELEASE_NAME }}.zip" -d validate/
-          
-          REQUIRED_FILES=(
-            "module.prop"
-            "service.sh"
-            "system/xbin/v2ray_monitor.sh"
-          )
-          
-          for file in "${REQUIRED_FILES[@]}"; do
-            if [[ ! -f "validate/$file" ]]; then
-              echo "::error::Missing required file: $file"
-              exit 1
-            fi
-          done
-          rm -rf validate
-
-      - name: 📤 Upload Build Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.RELEASE_NAME }}-${{ steps.version.outputs.version }}
-          path: ${{ env.RELEASE_NAME }}.zip
-
-  release:
-    name: 🎉 Create GitHub Release
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      
-    steps:
-      - name: 📥 Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: 📥 Download Build Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ env.RELEASE_NAME }}-${{ needs.build.outputs.version }}
-
-      - name: 🎯 Create GitHub Release
+      - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ needs.build.outputs.tag }}
-          name: "V2Ray Monitor v${{ needs.build.outputs.version }}"
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: V2Ray Monitor v${{ steps.version.outputs.version }}
           body: |
-            # V2Ray Monitor Module ${{ needs.build.outputs.version }}
+            ## V2Ray Monitor Module v${{ steps.version.outputs.version }}
             
-            ${{ needs.build.outputs.release_notes }}
-            
-            ## Installation
-            1. Download the ZIP file
-            2. Install via Magisk
+            ### 📥 Installation
+            1. Download `v2ray-monitor-module.zip`
+            2. Install via Magisk Manager
             3. Reboot device
             
-            ## Features
-            - V2Ray monitoring
-            - Web dashboard
-            - Notifications
+            ### ✨ Features
+            - 🔄 Auto V2Ray monitoring and restart
+            - 🌐 Web dashboard at http://localhost:9091
+            - 📱 Telegram notifications
+            - ☁️ Cloudflare Tunnel support
+            - 🔌 USB Tethering control
             
-            **Download**: [${{ env.RELEASE_NAME }}.zip](https://github.com/${{ github.repository }}/releases/download/${{ needs.build.outputs.tag }}/${{ env.RELEASE_NAME }}.zip)
-          files: ${{ env.RELEASE_NAME }}.zip
+            ### 📋 Requirements
+            - Android device with root access
+            - Magisk installed
+            - V2rayNG app
+            
+            ---
+            
+            **Download**: [v2ray-monitor-module.zip](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/v2ray-monitor-module.zip)
+          files: v2ray-monitor-module.zip
           draft: false
-          prerelease: ${{ github.event.inputs.prerelease }}
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  notify:
-    name: 📢 Post-Release Notifications
-    needs: [build, release]
-    runs-on: ubuntu-latest
-    if: success()
-    
-    steps:
-      - name: 🔄 Update Repository
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          
-      - name: 💾 Commit Version Updates
+      - name: Update Repository
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          git add module.prop update.json
-          git commit -m "Update version to ${{ needs.build.outputs.version }}" || echo "No changes to commit"
-          git push
+          git add module.prop update.json ui/www/cgi-bin/get_version.sh customize.sh
+          git commit -m "🔄 Update version to ${{ steps.version.outputs.version }}" || true
+          git push || true
