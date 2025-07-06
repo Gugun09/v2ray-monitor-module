@@ -3,469 +3,582 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>V2Ray Monitor</title>
+    <title>V2Ray Monitor Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            --primary-color: #4f46e5;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --info-color: #3b82f6;
+            --dark-color: #1f2937;
+            --light-color: #f8fafc;
+        }
+
         .log-box {
-            background: #1e1e1e;
-            color: #0f0;
+            background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
+            color: #00ff41;
             padding: 1rem;
-            height: 200px;
+            height: 250px;
             overflow-y: auto;
-            border-radius: 0.375rem;
-            font-family: monospace;
+            border-radius: 0.5rem;
+            font-family: 'Courier New', monospace;
             white-space: pre-wrap;
+            border: 1px solid #333;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .log-box::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .log-box::-webkit-scrollbar-track {
+            background: #2d2d2d;
+            border-radius: 4px;
+        }
+        
+        .log-box::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+        
+        .log-box::-webkit-scrollbar-thumb:hover {
+            background: #777;
         }
         
         .gradient-bg {
-            background: linear-gradient(135deg, #6b21a8 0%, #2563eb 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .btn {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .btn:hover:before {
+            left: 100%;
         }
         
         .btn-primary {
-            background-color: #4f46e5;
-            transition: all 0.3s ease;
+            background: linear-gradient(135deg, var(--primary-color) 0%, #6366f1 100%);
         }
         
         .btn-primary:hover {
-            background-color: #4338ca;
-            transform: translateY(-1px);
+            background: linear-gradient(135deg, #4338ca 0%, #5b21b6 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3);
         }
         
         .btn-success {
-            background-color: #10b981;
-            transition: all 0.3s ease;
+            background: linear-gradient(135deg, var(--success-color) 0%, #059669 100%);
         }
         
         .btn-success:hover {
-            background-color: #059669;
-            transform: translateY(-1px);
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
         }
         
         .btn-danger {
-            background-color: #ef4444;
-            transition: all 0.3s ease;
+            background: linear-gradient(135deg, var(--danger-color) 0%, #dc2626 100%);
         }
         
         .btn-danger:hover {
-            background-color: #dc2626;
-            transform: translateY(-1px);
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3);
         }
         
         .btn-warning {
-            background-color: #f59e0b;
-            transition: all 0.3s ease;
+            background: linear-gradient(135deg, var(--warning-color) 0%, #d97706 100%);
         }
         
         .btn-warning:hover {
-            background-color: #d97706;
-            transform: translateY(-1px);
+            background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(245, 158, 11, 0.3);
         }
         
         .card {
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
         }
         
         .card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }
         
-        .badge {
-            padding: 0.35em 0.65em;
-            font-size: 0.75em;
-            font-weight: 700;
+        .status-badge {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+            font-weight: 600;
             letter-spacing: 0.05em;
+            border-radius: 9999px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-online {
+            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+            color: #166534;
+            border: 1px solid #22c55e;
+        }
+        
+        .status-offline {
+            background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%);
+            color: #991b1b;
+            border: 1px solid #ef4444;
+        }
+        
+        .status-loading {
+            background: linear-gradient(135deg, #f0f9ff 0%, #dbeafe 100%);
+            color: #1e40af;
+            border: 1px solid #3b82f6;
         }
         
         .toast {
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            backdrop-filter: blur(10px);
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.8;
+            }
+        }
+        
+        .loading-spinner {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid var(--primary-color);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .input-group {
+            position: relative;
+        }
+        
+        .input-group input:focus + .input-icon {
+            color: var(--primary-color);
+        }
+        
+        .input-icon {
+            transition: color 0.3s ease;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%);
+            border: 1px solid rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+        }
+        
+        .connection-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+        
+        .connection-online {
+            background: #22c55e;
+            box-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+        }
+        
+        .connection-offline {
+            background: #ef4444;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+        }
+        
+        .dark-mode {
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+        
+        .dark-mode .card {
+            background: rgba(30, 41, 59, 0.95);
+            border: 1px solid rgba(51, 65, 85, 0.3);
+        }
+        
+        .dark-mode .log-box {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            border-color: #334155;
         }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
-    <div class="gradient-bg text-white py-6 shadow-lg">
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <!-- Header -->
+    <header class="gradient-bg text-white py-6 shadow-2xl">
         <div class="container mx-auto px-4">
-            <div class="flex flex-col items-center">
-                <div class="flex items-center mb-2">
-                    <i class="fas fa-shield-alt text-3xl mr-3"></i>
-                    <h1 class="text-3xl font-bold">V2Ray Monitor</h1>
-                </div>
-                <div class="bg-indigo-700 rounded-full px-4 py-1 flex items-center">
-                    <i class="fas fa-microchip mr-2 text-sm"></i>
-                    <span id="models" class="text-sm font-medium">Memuat...</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="container mx-auto px-4 py-8 max-w-4xl">
-        <!-- Status Card -->
-        <div class="card bg-white rounded-xl shadow-md overflow-hidden mb-6">
-            <div class="p-6">
-                <div class="flex items-center mb-4">
-                    <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center mr-3">
-                        <i class="fas fa-power-off text-indigo-600"></i>
+            <div class="flex flex-col lg:flex-row items-center justify-between">
+                <div class="flex items-center mb-4 lg:mb-0">
+                    <div class="relative">
+                        <i class="fas fa-shield-alt text-4xl mr-4 text-blue-200"></i>
+                        <div class="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
                     </div>
-                    <h2 class="text-xl font-semibold text-gray-800">Status V2Ray</h2>
+                    <div>
+                        <h1 class="text-3xl font-bold">V2Ray Monitor</h1>
+                        <p class="text-blue-200 text-sm">Advanced Network Monitoring Dashboard</p>
+                    </div>
                 </div>
                 
-                <div class="flex flex-col items-center mb-4">
-                    <span class="text-gray-600 mb-2">Status saat ini:</span>
-                    <span id="status" class="badge bg-gray-200 text-gray-800">Memuat...</span>
-                </div>
-                
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <button onclick="control('start')" class="btn-success text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-play mr-2"></i> Start
+                <div class="flex items-center space-x-4">
+                    <div class="bg-white bg-opacity-20 rounded-full px-4 py-2 flex items-center">
+                        <i class="fas fa-microchip mr-2 text-sm"></i>
+                        <span id="deviceInfo" class="text-sm font-medium">Loading...</span>
+                    </div>
+                    
+                    <button onclick="toggleDarkMode()" class="bg-white bg-opacity-20 hover:bg-opacity-30 rounded-full p-2 transition-all">
+                        <i class="fas fa-moon text-lg"></i>
                     </button>
-                    <button onclick="control('stop')" class="btn-danger text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-stop mr-2"></i> Stop
-                    </button>
-                    <button onclick="control('restart')" class="btn-warning text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-redo mr-2"></i> Restart
+                    
+                    <button onclick="refreshAll()" class="bg-white bg-opacity-20 hover:bg-opacity-30 rounded-full p-2 transition-all">
+                        <i class="fas fa-sync-alt text-lg" id="refreshIcon"></i>
                     </button>
                 </div>
             </div>
         </div>
+    </header>
 
-        <!-- USB Tethering Card -->
-        <div class="card bg-white rounded-xl shadow-md overflow-hidden mb-6">
-            <div class="p-6">
-                <div class="flex items-center mb-4">
-                    <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
-                        <i class="fas fa-plug text-blue-600"></i>
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <!-- Status Overview -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div class="stat-card card rounded-xl shadow-lg p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-600 text-sm font-medium">VPN Status</p>
+                        <div class="flex items-center mt-2">
+                            <span class="connection-indicator connection-offline" id="connectionIndicator"></span>
+                            <span id="vpnStatus" class="text-lg font-bold">Checking...</span>
+                        </div>
                     </div>
-                    <h2 class="text-xl font-semibold text-gray-800">USB Tethering</h2>
+                    <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-globe text-blue-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stat-card card rounded-xl shadow-lg p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-600 text-sm font-medium">USB Tethering</p>
+                        <div class="flex items-center mt-2">
+                            <span class="connection-indicator connection-offline" id="usbIndicator"></span>
+                            <span id="usbStatusText" class="text-lg font-bold">Checking...</span>
+                        </div>
+                    </div>
+                    <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-plug text-green-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stat-card card rounded-xl shadow-lg p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-600 text-sm font-medium">Uptime</p>
+                        <p id="uptime" class="text-lg font-bold mt-2">Calculating...</p>
+                    </div>
+                    <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-clock text-purple-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Controls -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <!-- V2Ray Control -->
+            <div class="card rounded-xl shadow-lg overflow-hidden">
+                <div class="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4">
+                    <div class="flex items-center">
+                        <i class="fas fa-power-off text-2xl mr-3"></i>
+                        <h2 class="text-xl font-semibold">V2Ray Control</h2>
+                    </div>
                 </div>
                 
-                <div class="flex flex-col items-center mb-4">
-                    <span class="text-gray-600 mb-2">Status saat ini:</span>
-                    <span id="usbStatus" class="badge bg-gray-200 text-gray-800">Memuat...</span>
+                <div class="p-6">
+                    <div class="text-center mb-6">
+                        <span id="status" class="status-badge status-loading">
+                            <div class="loading-spinner"></div>
+                            Loading...
+                        </span>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <button onclick="controlV2Ray('start')" class="btn btn-success text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-play mr-2"></i> Start
+                        </button>
+                        <button onclick="controlV2Ray('stop')" class="btn btn-danger text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-stop mr-2"></i> Stop
+                        </button>
+                        <button onclick="controlV2Ray('restart')" class="btn btn-warning text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-redo mr-2"></i> Restart
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- USB Tethering Control -->
+            <div class="card rounded-xl shadow-lg overflow-hidden">
+                <div class="bg-gradient-to-r from-green-500 to-teal-600 text-white p-4">
+                    <div class="flex items-center">
+                        <i class="fas fa-plug text-2xl mr-3"></i>
+                        <h2 class="text-xl font-semibold">USB Tethering</h2>
+                    </div>
+                </div>
+                
+                <div class="p-6">
+                    <div class="text-center mb-6">
+                        <span id="usbStatus" class="status-badge status-loading">
+                            <div class="loading-spinner"></div>
+                            Loading...
+                        </span>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <button onclick="controlTethering('start')" class="btn btn-success text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-plug mr-2"></i> Enable
+                        </button>
+                        <button onclick="controlTethering('stop')" class="btn btn-danger text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-unplug mr-2"></i> Disable
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cloudflare Tunnel -->
+        <div class="card rounded-xl shadow-lg overflow-hidden mb-8">
+            <div class="bg-gradient-to-r from-purple-500 to-pink-600 text-white p-4">
+                <div class="flex items-center">
+                    <i class="fas fa-cloud text-2xl mr-3"></i>
+                    <h2 class="text-xl font-semibold">Cloudflare Tunnel</h2>
+                </div>
+            </div>
+            
+            <div class="p-6">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Tunnel URL</label>
+                    <div class="flex">
+                        <input type="text" id="tunnelUrl" class="flex-1 py-3 px-4 rounded-l-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 bg-gray-50" value="🔄 Waiting for URL..." readonly>
+                        <button onclick="copyTunnelUrl()" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-r-lg transition-all">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <button onclick="tetherControl('start')" class="btn-success text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-plug mr-2"></i> Start USB Tethering
+                    <button onclick="controlTunnel('start')" class="btn btn-success text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-play mr-2"></i> Start Tunnel
                     </button>
-                    <button onclick="tetherControl('stop')" class="btn-danger text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-unplug mr-2"></i> Stop USB Tethering
+                    <button onclick="controlTunnel('stop')" class="btn btn-danger text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-stop mr-2"></i> Stop Tunnel
                     </button>
                 </div>
+                
+                <p class="text-xs text-gray-500 mt-3 text-center">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Use this URL to access V2Ray Monitor remotely through Cloudflare Tunnel
+                </p>
             </div>
         </div>
 
-        <!-- Cloudflare Tunnel Card -->
-        <div class="card bg-white rounded-xl shadow-md overflow-hidden mb-6">
-            <div class="p-6">
-                <div class="flex items-center mb-4">
-                    <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center mr-3">
-                        <i class="fas fa-cloud text-purple-600"></i>
+        <!-- Live Log -->
+        <div class="card rounded-xl shadow-lg overflow-hidden mb-8">
+            <div class="bg-gradient-to-r from-gray-700 to-gray-900 text-white p-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <i class="fas fa-terminal text-2xl mr-3"></i>
+                        <h2 class="text-xl font-semibold">Live System Log</h2>
                     </div>
-                    <h2 class="text-xl font-semibold text-gray-800">Cloudflare Tunnel</h2>
-                </div>
-                
-                <div class="flex flex-col gap-3">
-                    <div class="relative mb-2">
-                        <input type="text" id="tunnelUrl" class="w-full py-2 px-4 pr-16 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500" value="🔄 Menunggu URL..." readonly>
-                        <button onclick="copyTunnelUrl()" class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-indigo-600 text-white px-3 py-1 rounded-md text-sm hover:bg-indigo-700 transition">
-                            <i class="fas fa-copy mr-1"></i> Copy
+                    <div class="flex items-center space-x-2">
+                        <button onclick="clearLog()" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm transition-all">
+                            <i class="fas fa-trash mr-1"></i> Clear
                         </button>
+                        <button onclick="downloadLog()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition-all">
+                            <i class="fas fa-download mr-1"></i> Download
+                        </button>
+                        <div class="flex items-center">
+                            <span class="text-sm mr-2">Auto-scroll:</span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="autoScroll" class="sr-only peer" checked>
+                                <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <button onclick="tunnelControl('start')" class="btn-success text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center">
-                            <i class="fas fa-play mr-2"></i> Start Tunnel
-                        </button>
-                        <button onclick="tunnelControl('stop')" class="btn-danger text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center">
-                            <i class="fas fa-stop mr-2"></i> Stop Tunnel
-                        </button>
-                    </div>
-                    <p class="text-xs text-gray-500 mt-2">Gunakan URL ini untuk mengakses V2Ray melalui Cloudflare Tunnel</p>
                 </div>
             </div>
-        </div>
-
-        <!-- Log Card -->
-        <div class="card bg-white rounded-xl shadow-md overflow-hidden mb-6">
+            
             <div class="p-6">
-                <div class="flex items-center mb-4">
-                    <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mr-3">
-                        <i class="fas fa-terminal text-green-600"></i>
-                    </div>
-                    <h2 class="text-xl font-semibold text-gray-800">Live Log</h2>
-                </div>
-                
                 <div class="relative">
-                    <pre class="log-box" id="log">🔄 Memuat log...</pre>
-                    <button onclick="document.getElementById('log').scrollTop = document.getElementById('log').scrollHeight" class="absolute right-2 bottom-2 bg-gray-800 text-white px-2 py-1 rounded-md text-xs hover:bg-gray-700 transition">
-                        <i class="fas fa-arrow-down mr-1"></i> Scroll Down
+                    <pre class="log-box" id="log">🔄 Loading system logs...</pre>
+                    <button onclick="scrollToBottom()" class="absolute right-4 bottom-4 bg-gray-800 hover:bg-gray-700 text-white px-3 py-2 rounded-md text-sm transition-all">
+                        <i class="fas fa-arrow-down mr-1"></i> Bottom
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- Telegram Config Card -->
-        <div class="card bg-white rounded-xl shadow-md overflow-hidden mb-6">
+        <!-- Telegram Configuration -->
+        <div class="card rounded-xl shadow-lg overflow-hidden">
+            <div class="bg-gradient-to-r from-blue-500 to-cyan-600 text-white p-4">
+                <div class="flex items-center">
+                    <i class="fab fa-telegram text-2xl mr-3"></i>
+                    <h2 class="text-xl font-semibold">Telegram Bot Configuration</h2>
+                </div>
+            </div>
+            
             <div class="p-6">
-                <div class="flex items-center mb-4">
-                    <div class="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center mr-3">
-                        <i class="fab fa-telegram text-teal-600"></i>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="input-group">
+                        <label for="botToken" class="block text-sm font-medium text-gray-700 mb-2">Bot Token</label>
+                        <div class="relative">
+                            <input type="password" id="botToken" class="w-full py-3 px-4 pr-12 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" placeholder="Enter your Telegram bot token">
+                            <div class="absolute inset-y-0 right-0 flex items-center pr-3">
+                                <button onclick="togglePasswordVisibility('botToken')" class="text-gray-400 hover:text-gray-600">
+                                    <i class="fas fa-eye" id="botTokenEye"></i>
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    <h2 class="text-xl font-semibold text-gray-800">Pengaturan Telegram Bot</h2>
+                    
+                    <div class="input-group">
+                        <label for="chatId" class="block text-sm font-medium text-gray-700 mb-2">Chat ID</label>
+                        <div class="relative">
+                            <input type="text" id="chatId" class="w-full py-3 px-4 pr-12 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" placeholder="Enter your Telegram chat ID">
+                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                <i class="fas fa-id-card text-gray-400 input-icon"></i>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 
-                <div class="space-y-4">
-                    <div>
-                        <label for="botToken" class="block text-sm font-medium text-gray-700 mb-1">Bot Token</label>
-                        <div class="relative">
-                            <input type="text" id="botToken" class="w-full py-2 px-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Masukkan token bot Telegram">
-                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                <i class="fas fa-key text-gray-400"></i>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div>
-                        <label for="chatId" class="block text-sm font-medium text-gray-700 mb-1">Chat ID</label>
-                        <div class="relative">
-                            <input type="text" id="chatId" class="w-full py-2 px-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Masukkan ID chat Telegram">
-                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                <i class="fas fa-id-card text-gray-400"></i>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <button onclick="updateBotConfig()" class="btn-primary text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center">
-                            <i class="fas fa-save mr-2"></i> Simpan Pengaturan
-                        </button>
-                        <button onclick="sendTestMessage()" class="bg-amber-500 hover:bg-amber-600 text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center">
-                            <i class="fas fa-paper-plane mr-2"></i> Kirim Pesan Uji
-                        </button>
-                    </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-6">
+                    <button onclick="saveTelegramConfig()" class="btn btn-primary text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-save mr-2"></i> Save Configuration
+                    </button>
+                    <button onclick="testTelegramConfig()" class="btn bg-amber-500 hover:bg-amber-600 text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-paper-plane mr-2"></i> Send Test Message
+                    </button>
+                </div>
+                
+                <div class="mt-4 p-4 bg-blue-50 rounded-lg">
+                    <h4 class="font-medium text-blue-900 mb-2">
+                        <i class="fas fa-info-circle mr-2"></i>How to get your Bot Token and Chat ID:
+                    </h4>
+                    <ol class="text-sm text-blue-800 space-y-1">
+                        <li>1. Message @BotFather on Telegram to create a new bot</li>
+                        <li>2. Copy the bot token provided by BotFather</li>
+                        <li>3. Message @userinfobot to get your Chat ID</li>
+                        <li>4. Enter both values above and click Save</li>
+                    </ol>
                 </div>
             </div>
         </div>
     </div>
 
-    <footer class="bg-gray-800 text-white py-6 mt-8">
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-8 mt-12">
         <div class="container mx-auto px-4">
             <div class="flex flex-col items-center text-center">
-                <div class="flex items-center mb-2">
-                    <i class="fas fa-code text-indigo-300 mr-2"></i>
-                    <p class="text-sm">Dibuat oleh <strong id="devName" class="text-indigo-300">Memuat...</strong></p>
+                <div class="flex items-center mb-4">
+                    <i class="fas fa-code text-blue-400 mr-2 text-xl"></i>
+                    <p class="text-lg">Developed by <strong id="devName" class="text-blue-400">Loading...</strong></p>
                 </div>
-                <div class="flex flex-wrap justify-center gap-4 mb-3">
-                    <div class="flex items-center">
+                
+                <div class="flex flex-wrap justify-center gap-6 mb-4">
+                    <div class="flex items-center bg-gray-800 rounded-full px-4 py-2">
                         <span class="bg-blue-500 text-white text-xs px-2 py-1 rounded-full mr-2">App</span>
-                        <span id="appVersion" class="text-xs">Memuat...</span>
+                        <span id="appVersion" class="text-sm">Loading...</span>
                     </div>
-                    <div class="flex items-center">
-                        <span class="bg-purple-500 text-white text-xs px-2 py-1 rounded-full mr-2">Code</span>
-                        <span id="codeVersion" class="text-xs">Memuat...</span>
+                    <div class="flex items-center bg-gray-800 rounded-full px-4 py-2">
+                        <span class="bg-purple-500 text-white text-xs px-2 py-1 rounded-full mr-2">Build</span>
+                        <span id="codeVersion" class="text-sm">Loading...</span>
+                    </div>
+                    <div class="flex items-center bg-gray-800 rounded-full px-4 py-2">
+                        <span class="bg-green-500 text-white text-xs px-2 py-1 rounded-full mr-2">Status</span>
+                        <span class="text-sm">Online</span>
                     </div>
                 </div>
-                <p class="text-xs text-gray-400">&copy; 2025 - Semua Hak Dilindungi | Cloudflare Tunnel & V2Ray Monitor</p>
+                
+                <p class="text-sm text-gray-400 mb-4">
+                    &copy; 2025 V2Ray Monitor Dashboard. All rights reserved.
+                </p>
+                
+                <div class="flex space-x-4">
+                    <a href="#" class="text-gray-400 hover:text-white transition-colors">
+                        <i class="fab fa-github text-xl"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-white transition-colors">
+                        <i class="fab fa-telegram text-xl"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-white transition-colors">
+                        <i class="fas fa-globe text-xl"></i>
+                    </a>
+                </div>
             </div>
         </div>
     </footer>
 
     <!-- Toast Container -->
-    <div class="fixed top-4 right-4 z-50 space-y-2 w-80" id="toastContainer"></div>
+    <div class="fixed top-4 right-4 z-50 space-y-2 w-96" id="toastContainer"></div>
 
-    <script>
-        function showToast(message, type = "info") {
-            let toastId = `toast-${Date.now()}`;
-            let icon = "";
-            let bgColor = "";
-            
-            switch(type) {
-                case "success":
-                    icon = "fa-check-circle";
-                    bgColor = "bg-green-500";
-                    break;
-                case "danger":
-                    icon = "fa-times-circle";
-                    bgColor = "bg-red-500";
-                    break;
-                case "warning":
-                    icon = "fa-exclamation-triangle";
-                    bgColor = "bg-yellow-500";
-                    break;
-                default:
-                    icon = "fa-info-circle";
-                    bgColor = "bg-blue-500";
-            }
-            
-            let toastHtml = `
-                <div id="${toastId}" class="toast flex items-center ${bgColor} text-white px-4 py-3 rounded-lg shadow-lg animate-fade-in">
-                    <i class="fas ${icon} mr-3 text-xl"></i>
-                    <div class="flex-1">${message}</div>
-                    <button type="button" class="ml-3 text-white opacity-70 hover:opacity-100" onclick="document.getElementById('${toastId}').remove()">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            `;
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg p-8 flex items-center space-x-4">
+            <div class="loading-spinner"></div>
+            <span class="text-lg font-medium">Processing...</span>
+        </div>
+    </div>
 
-            let toastContainer = document.getElementById("toastContainer");
-            let toastElement = document.createElement("div");
-            toastElement.innerHTML = toastHtml;
-            toastContainer.appendChild(toastElement);
-
-            setTimeout(() => {
-                toastElement.remove();
-            }, 5000);
-        }
-
-        function getEl(id) {
-            return document.getElementById(id);
-        }
-
-        function fetchWithToast(url, options = {}, successType = "success", errorType = "danger", onSuccess, onError) {
-            fetch(url, options)
-                .then(response => response.text())
-                .then(result => {
-                    showToast(result, successType);
-                    if (onSuccess) onSuccess(result);
-                })
-                .catch(error => {
-                    showToast("❌ Error: " + error, errorType);
-                    if (onError) onError(error);
-                });
-        }
-
-        function control(action) {
-            fetchWithToast(`/cgi-bin/${action}.sh`, {}, "success", "danger", () => checkStatus());
-        }
-
-        function tetherControl(action) {
-            fetchWithToast(`/cgi-bin/usb_tether.sh?action=${action}`, {}, "success", "danger", () => checkUsbStatus());
-        }
-
-        function tunnelControl(action) {
-            fetchWithToast(`/cgi-bin/tunnel.sh?${action}`, {}, "success", "danger");
-        }
-
-        function checkUsbStatus() {
-            fetch(`/cgi-bin/status_usb.sh`)
-                .then(response => response.text())
-                .then(status => {
-                    let statusElement = getEl("usbStatus");
-                    statusElement.innerText = status.includes("enabled") ? "Aktif" : "Nonaktif";
-                    statusElement.className = status.includes("enabled") ? "badge bg-green-100 text-green-800" : "badge bg-red-100 text-red-800";
-                })
-                .catch(error => {
-                    getEl("usbStatus").innerText = "Gagal";
-                    getEl("usbStatus").className = "badge bg-yellow-100 text-yellow-800";
-                });
-        }
-
-        function checkStatus() {
-            fetch(`/cgi-bin/status.sh`).then(response => response.text()).then(status => {
-                getEl("status").innerText = status;
-                getEl("status").className = status.includes("Running") ? "badge bg-green-100 text-green-800" : "badge bg-red-100 text-red-800";
-            }).catch(error => {
-                getEl("status").innerText = "Gagal";
-                getEl("status").className = "badge bg-yellow-100 text-yellow-800";
-            });
-        }
-
-        function updateLog() {
-            fetch(`/cgi-bin/log.sh`).then(response => response.text()).then(logs => {
-                let logElement = getEl("log");
-                logElement.innerText = logs;
-                logElement.scrollTop = logElement.scrollHeight;
-            }).catch(error => {
-                getEl("log").innerText = "🚫 Gagal memuat log";
-            });
-        }
-
-        function updateBotConfig() {
-            const botToken = getEl("botToken").value;
-            const chatId = getEl("chatId").value;
-            fetchWithToast('/cgi-bin/update_env.sh', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ botToken, chatId })
-            });
-        }
-
-        function sendTestMessage() {
-            fetch('/cgi-bin/send_telegram_message.sh').then(response => response.json()).then(result => {
-                showToast(result.ok ? "✅ Pesan terkirim!" : "❌ Gagal mengirim pesan", result.ok ? "success" : "danger");
-            }).catch(error => showToast("🚫 Error: " + error, "danger"));
-        }
-
-        function loadBotConfig() {
-            fetch('/cgi-bin/get_bot_config.sh')
-                .then(response => response.json())
-                .then(data => {
-                    getEl("botToken").value = data.botToken;
-                    getEl("chatId").value = data.chatId;
-                    getEl("models").innerText = data.hostname;
-
-                    let tunnelElement = getEl("tunnelUrl");
-                    if (tunnelElement.tagName === "INPUT") {
-                        tunnelElement.value = data.tunnelUrl;
-                    } else {
-                        tunnelElement.innerText = data.tunnelUrl;
-                    }
-                })
-                .catch(error => showToast("❌ Gagal memuat pengaturan", "danger"));
-        }
-
-        function loadVersionInfo() {
-            fetch('/cgi-bin/get_version.sh')
-                .then(response => response.json())
-                .then(data => {
-                    getEl("devName").innerText = data.devName;
-                    getEl("appVersion").innerText = data.appVersion;
-                    getEl("codeVersion").innerText = data.codeVersion;
-                })
-                .catch(error => showToast("❌ Gagal memuat versi", "danger"));
-        }
-
-        function copyTunnelUrl() {
-            let tunnelInput = getEl("tunnelUrl");
-            tunnelInput.select();
-            tunnelInput.setSelectionRange(0, 99999);
-
-            navigator.clipboard.writeText(tunnelInput.value).then(() => {
-                showToast("📋 URL berhasil disalin!", "success");
-            }).catch(err => {
-                showToast("❌ Gagal menyalin URL", "danger");
-            });
-        }
-
-        function checkForUpdate() {
-            fetch('/cgi-bin/check_update.sh')
-                .then(response => response.json())
-                .then(data => {
-                    const localVersion = getEl("appVersion").innerText;
-                    if (data.version && data.version !== localVersion) {
-                        showToast(`Update tersedia: v${data.version} <button onclick=\"doUpdate('${data.url}')\" class=\"underline\">Update</button>`, "warning");
-                    }
-                });
-        }
-
-        function doUpdate(url) {
-            fetch('/cgi-bin/do_update.sh?url=' + encodeURIComponent(url))
-                .then(response => response.text())
-                .then(result => showToast(result, "success"))
-                .catch(error => showToast("Gagal update: " + error, "danger"));
-        }
-
-        setInterval(checkStatus, 5000);
-        setInterval(checkUsbStatus, 5000);
-        setInterval(updateLog, 3000);
-        window.onload = () => {
-            checkStatus();
-            updateLog();
-            loadBotConfig();
-            loadVersionInfo();
-            checkUsbStatus();
-            checkForUpdate();
-        };
-    </script>
+    <script src="js/app.js"></script>
 </body>
 </html>
