@@ -6,7 +6,7 @@ TMP_ZIP="/data/local/tmp/v2ray_monitor_module.zip"
 GITHUB_URL="https://github.com/gugun09/v2ray-monitor-module/releases/latest/download/v2ray_monitor_module.zip"
 
 ui_print "********************************************"
-ui_print "  V2Ray Monitor Module Installer v1.0.0 "
+ui_print "  V2Ray Monitor Module Installer v1.0.6 "
 ui_print "********************************************"
 
 # Menampilkan pilihan input volume
