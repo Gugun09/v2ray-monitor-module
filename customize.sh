@@ -5,7 +5,7 @@
 
 readonly MODDIR="/data/adb/modules/v2ray_monitor"
 readonly TMP_ZIP="/data/local/tmp/v2ray_monitor_module.zip"
-readonly GITHUB_URL="https://github.com/gugun09/v2ray-monitor-module/releases/latest/download/v2ray_monitor_module.zip"
+readonly GITHUB_URL="https://github.com/gugun09/v2ray-monitor-module/releases/latest/download/v2ray-monitor-module.zip"
 readonly LOG_FILE="/data/local/tmp/v2ray_monitor_install.log"
 readonly TIMEOUT_SECONDS=10
 

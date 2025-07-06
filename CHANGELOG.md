@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.0.5] - 2025-01-06
+### Fixed
+- Fixed download URL in customize.sh installer
+- Fixed GitHub release workflow and package naming
+- Corrected ZIP file corruption issue during installation
+- Improved error handling in installer script
+
+### Changed
+- Updated installer to use correct release filename
+- Enhanced download verification process
+- Better error messages for failed downloads
+
 ## [1.0.4] - 2025-01-04
 ### Added
 - GitHub Actions untuk automated release dan CI/CD
