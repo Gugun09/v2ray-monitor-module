@@ -100,7 +100,7 @@ monitor() {
         GET_LOCAL_IP=$(ip -4 addr show | awk '/inet / && !/127.0.0.1/ && !/tun0/ {print $2}' | cut -d/ -f1 | head -n 1)
 
         # Cek koneksi menggunakan curl dengan timeout sangat singkat
-        if su -c "timeout 3 curl --silent --fail --connect-timeout 1 --max-time 2 https://1.1.1.1" > /dev/null 2>&1; then
+        if su -c "timeout 3 curl --silent --fail --connect-timeout 1 --max-time 2 https://www.google.com" > /dev/null 2>&1; then
             CURRENT_STATUS="VPN TERHUBUNG"
         else
             CURRENT_STATUS="VPN TIDAK TERHUBUNG"
@@ -144,7 +144,7 @@ monitor() {
             sleep $CHECK_INTERVAL
 
             # Cek ulang dengan timeout singkat
-            if su -c "timeout 2 curl --silent --fail --connect-timeout 1 --max-time 1 https://1.1.1.1" > /dev/null 2>&1; then
+            if su -c "timeout 2 curl --silent --fail --connect-timeout 1 --max-time 1 https://www.google.com" > /dev/null 2>&1; then
                 echo "[$TIMESTAMP] ✅ Koneksi kembali normal tanpa restart." | tee -a "$LOG_FILE"
                 RETRY_COUNT=0  # Reset retry count
             elif [ "$RETRY_COUNT" -ge "$MAX_RETRY" ]; then
