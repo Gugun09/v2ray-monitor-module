@@ -1,6 +1,6 @@
 #!/system/bin/sh
 # =============================================================================
-# Telegram Utilities - Refactored Version
+# Telegram Utilities - Production Ready Version
 # =============================================================================
 
 readonly TELEGRAM_API_BASE="https://api.telegram.org/bot"
@@ -32,6 +32,12 @@ validate_telegram_config() {
     return 0
 }
 
+# URL encode function for special characters
+url_encode() {
+    local string="$1"
+    echo "$string" | sed 's/ /%20/g; s/\n/%0A/g; s/&/%26/g; s/</%3C/g; s/>/%3E/g; s/"/%22/g; s/#/%23/g; s/?/%3F/g'
+}
+
 # Send message to Telegram with error handling and retry
 send_telegram() {
     local message="$1"
@@ -47,8 +53,8 @@ send_telegram() {
         return 1
     fi
     
-    # Escape special characters for URL encoding
-    local encoded_message=$(echo "$message" | sed 's/ /%20/g; s/\n/%0A/g')
+    # URL encode the message
+    local encoded_message=$(url_encode "$message")
     local api_url="${TELEGRAM_API_BASE}${TELEGRAM_BOT_TOKEN}/sendMessage"
     
     while [ $retry_count -lt $max_retries ]; do

@@ -1,6 +1,6 @@
 #!/system/bin/sh
 # =============================================================================
-# Environment Utilities - Refactored Version
+# Environment Utilities - Production Ready Version
 # =============================================================================
 
 readonly ENV_FILE="/data/local/tmp/.env"
@@ -34,8 +34,8 @@ extract_env_value() {
         return 1
     fi
     
-    # Extract value and remove quotes
-    value=$(grep "^${key}=" "$ENV_FILE" 2>/dev/null | cut -d'=' -f2- | sed 's/^"//;s/"$//')
+    # Extract value and remove quotes, handle both single and double quotes
+    value=$(grep "^${key}=" "$ENV_FILE" 2>/dev/null | cut -d'=' -f2- | sed 's/^["'\'']*//;s/["'\'']*$//')
     
     if [ -z "$value" ]; then
         env_log "Empty or missing value for $key"
@@ -92,7 +92,7 @@ create_env_from_template() {
         cp "$template_file" "$ENV_FILE"
         chmod 600 "$ENV_FILE"
         # Remove carriage returns if present
-        sed -i 's/\r$//' "$ENV_FILE"
+        sed -i 's/\r$//' "$ENV_FILE" 2>/dev/null
         return 0
     fi
     

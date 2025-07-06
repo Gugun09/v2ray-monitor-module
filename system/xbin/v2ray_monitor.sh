@@ -1,7 +1,7 @@
 #!/system/bin/sh
 
 # =============================================================================
-# V2Ray Monitor Script - Refactored Version
+# V2Ray Monitor Script - Production Ready Version
 # =============================================================================
 
 # Constants
@@ -22,7 +22,7 @@ readonly CHECK_INTERVAL=3
 readonly NORMAL_INTERVAL=8
 
 # Device Info
-readonly HOSTNAME=$(getprop ro.product.model)
+readonly HOSTNAME=$(getprop ro.product.model 2>/dev/null || echo "Unknown")
 
 # =============================================================================
 # Utility Functions
@@ -100,7 +100,7 @@ source_utilities() {
 # =============================================================================
 
 get_public_ip() {
-    timeout 5 curl -s --connect-timeout 2 --max-time 3 https://api64.ipify.org 2>/dev/null || echo "Tidak diketahui"
+    timeout 5 curl -s --connect-timeout 2 --max-time 3 https://api64.ipify.org 2>/dev/null || echo "Unknown"
 }
 
 get_local_ip() {
@@ -127,7 +127,7 @@ quick_recheck_connection() {
 
 is_screen_on() {
     local state
-    state=$(su -c 'dumpsys power' | grep -E "mWakefulness=")
+    state=$(su -c 'dumpsys power' 2>/dev/null | grep -E "mWakefulness=")
     echo "$state" | grep -q "mWakefulness=Awake"
 }
 

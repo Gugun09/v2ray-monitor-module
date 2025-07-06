@@ -1,5 +1,5 @@
 // =============================================================================
-// V2Ray Monitor Dashboard - Main Application Script
+// V2Ray Monitor Dashboard - Production Ready Application
 // =============================================================================
 
 class V2RayMonitor {
@@ -8,6 +8,9 @@ class V2RayMonitor {
             refreshInterval: 5000,
             logRefreshInterval: 3000,
             maxToasts: 5,
+            retryAttempts: 3,
+            retryDelay: 1000,
+            apiTimeout: 10000,
             apiEndpoints: {
                 status: '/cgi-bin/status.sh',
                 log: '/cgi-bin/log.sh',
@@ -29,7 +32,10 @@ class V2RayMonitor {
             isDarkMode: localStorage.getItem('darkMode') === 'true',
             isAutoScrollEnabled: true,
             lastLogLength: 0,
-            startTime: Date.now()
+            startTime: Date.now(),
+            isOnline: navigator.onLine,
+            retryCount: 0,
+            lastUpdateTime: Date.now()
         };
         
         this.intervals = {};
@@ -54,6 +60,7 @@ class V2RayMonitor {
         if (autoScrollToggle) {
             autoScrollToggle.addEventListener('change', (e) => {
                 this.state.isAutoScrollEnabled = e.target.checked;
+                this.showToast(`Auto-scroll ${e.target.checked ? 'enabled' : 'disabled'}`, 'info');
             });
         }
 
@@ -81,6 +88,24 @@ class V2RayMonitor {
                 this.resumeUpdates();
             }
         });
+
+        // Online/offline detection
+        window.addEventListener('online', () => {
+            this.state.isOnline = true;
+            this.showToast('Connection restored', 'success');
+            this.resumeUpdates();
+        });
+
+        window.addEventListener('offline', () => {
+            this.state.isOnline = false;
+            this.showToast('Connection lost', 'warning');
+            this.pauseUpdates();
+        });
+
+        // Unload handler
+        window.addEventListener('beforeunload', () => {
+            this.pauseUpdates();
+        });
     }
 
     loadInitialData() {
@@ -103,11 +128,14 @@ class V2RayMonitor {
 
     pauseUpdates() {
         Object.values(this.intervals).forEach(interval => clearInterval(interval));
+        this.intervals = {};
     }
 
     resumeUpdates() {
-        this.startPeriodicUpdates();
-        this.refreshAll();
+        if (Object.keys(this.intervals).length === 0) {
+            this.startPeriodicUpdates();
+            this.refreshAll();
+        }
     }
 
     // =============================================================================
@@ -116,7 +144,9 @@ class V2RayMonitor {
 
     showToast(message, type = 'info', duration = 5000) {
         const toastContainer = document.getElementById('toastContainer');
-        const toastId = `toast-${Date.now()}`;
+        if (!toastContainer) return;
+
+        const toastId = `toast-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         
         const icons = {
             success: 'fa-check-circle',
@@ -133,7 +163,7 @@ class V2RayMonitor {
         };
 
         const toastHtml = `
-            <div id="${toastId}" class="toast flex items-center bg-gradient-to-r ${colors[type]} text-white px-6 py-4 rounded-lg shadow-lg">
+            <div id="${toastId}" class="toast flex items-center bg-gradient-to-r ${colors[type]} text-white px-6 py-4 rounded-lg shadow-lg mb-2">
                 <i class="fas ${icons[type]} mr-3 text-xl"></i>
                 <div class="flex-1 font-medium">${message}</div>
                 <button type="button" class="ml-4 text-white opacity-70 hover:opacity-100 transition-opacity" onclick="this.parentElement.remove()">
@@ -142,9 +172,7 @@ class V2RayMonitor {
             </div>
         `;
 
-        const toastElement = document.createElement('div');
-        toastElement.innerHTML = toastHtml;
-        toastContainer.appendChild(toastElement);
+        toastContainer.insertAdjacentHTML('beforeend', toastHtml);
 
         // Auto-remove after duration
         setTimeout(() => {
@@ -184,15 +212,20 @@ class V2RayMonitor {
     }
 
     // =============================================================================
-    // API Calls
+    // API Calls with Retry Logic
     // =============================================================================
 
     async apiCall(endpoint, options = {}) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), this.config.apiTimeout);
+
         try {
             const response = await fetch(endpoint, {
-                timeout: 10000,
+                signal: controller.signal,
                 ...options
             });
+            
+            clearTimeout(timeoutId);
             
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -200,15 +233,39 @@ class V2RayMonitor {
             
             return await response.text();
         } catch (error) {
+            clearTimeout(timeoutId);
+            
+            if (error.name === 'AbortError') {
+                throw new Error('Request timeout');
+            }
+            
             console.error(`API call failed for ${endpoint}:`, error);
             throw error;
         }
     }
 
+    async apiCallWithRetry(endpoint, options = {}) {
+        let lastError;
+        
+        for (let attempt = 1; attempt <= this.config.retryAttempts; attempt++) {
+            try {
+                return await this.apiCall(endpoint, options);
+            } catch (error) {
+                lastError = error;
+                
+                if (attempt < this.config.retryAttempts) {
+                    await new Promise(resolve => setTimeout(resolve, this.config.retryDelay * attempt));
+                }
+            }
+        }
+        
+        throw lastError;
+    }
+
     async apiCallWithToast(endpoint, options = {}, successMessage = null, errorMessage = null) {
         try {
             this.showLoading(true);
-            const result = await this.apiCall(endpoint, options);
+            const result = await this.apiCallWithRetry(endpoint, options);
             this.showLoading(false);
             
             if (successMessage) {
@@ -231,15 +288,18 @@ class V2RayMonitor {
     async checkStatus() {
         try {
             const status = await this.apiCall(this.config.apiEndpoints.status);
-            const isRunning = status.includes('running') || status.includes('Running');
+            const isRunning = status.includes('running') || status.includes('Running') || status.includes('✅');
             
             this.updateStatusDisplay('status', isRunning ? 'Online' : 'Offline', isRunning);
             this.updateConnectionIndicator('connectionIndicator', isRunning);
             this.updateElement('vpnStatus', isRunning ? 'Connected' : 'Disconnected');
             
+            this.state.lastUpdateTime = Date.now();
+            
         } catch (error) {
             this.updateStatusDisplay('status', 'Error', false);
             this.updateElement('vpnStatus', 'Unknown');
+            console.error('Status check failed:', error);
         }
     }
 
@@ -255,6 +315,7 @@ class V2RayMonitor {
         } catch (error) {
             this.updateStatusDisplay('usbStatus', 'Error', false);
             this.updateElement('usbStatusText', 'Unknown');
+            console.error('USB status check failed:', error);
         }
     }
 
@@ -293,6 +354,11 @@ class V2RayMonitor {
             restart: 'V2Ray restarted successfully'
         };
 
+        if (!endpoints[action]) {
+            this.showToast(`Invalid action: ${action}`, 'error');
+            return;
+        }
+
         try {
             await this.apiCallWithToast(
                 endpoints[action],
@@ -309,6 +375,11 @@ class V2RayMonitor {
     }
 
     async controlTethering(action) {
+        if (!['start', 'stop'].includes(action)) {
+            this.showToast(`Invalid tethering action: ${action}`, 'error');
+            return;
+        }
+
         try {
             await this.apiCallWithToast(
                 `${this.config.apiEndpoints.usbTether}?action=${action}`,
@@ -325,6 +396,11 @@ class V2RayMonitor {
     }
 
     async controlTunnel(action) {
+        if (!['start', 'stop'].includes(action)) {
+            this.showToast(`Invalid tunnel action: ${action}`, 'error');
+            return;
+        }
+
         try {
             await this.apiCallWithToast(
                 `${this.config.apiEndpoints.tunnel}?${action}`,
@@ -335,6 +411,12 @@ class V2RayMonitor {
             
             if (action === 'start') {
                 setTimeout(() => this.updateTunnelUrl(), 5000);
+            } else {
+                // Clear tunnel URL when stopped
+                const tunnelInput = document.getElementById('tunnelUrl');
+                if (tunnelInput) {
+                    tunnelInput.value = '🔄 Waiting for URL...';
+                }
             }
         } catch (error) {
             // Error already handled by apiCallWithToast
@@ -358,7 +440,8 @@ class V2RayMonitor {
                 }
             }
         } catch (error) {
-            this.updateElement('log', '🚫 Failed to load logs');
+            this.updateElement('log', '🚫 Failed to load logs\n❌ ' + error.message);
+            console.error('Log update failed:', error);
         }
     }
 
@@ -370,26 +453,37 @@ class V2RayMonitor {
     }
 
     clearLog() {
-        if (confirm('Are you sure you want to clear the log?')) {
-            this.updateElement('log', '📝 Log cleared');
-            this.showToast('Log cleared successfully', 'info');
+        if (confirm('Are you sure you want to clear the log display?\n\nNote: This only clears the display, not the actual log file.')) {
+            this.updateElement('log', '📝 Log display cleared\nℹ️  Refresh to reload logs from file');
+            this.showToast('Log display cleared', 'info');
         }
     }
 
     downloadLog() {
-        const logContent = document.getElementById('log').textContent;
-        const blob = new Blob([logContent], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
+        const logContent = document.getElementById('log')?.textContent || '';
         
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `v2ray-monitor-log-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.txt`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        this.showToast('Log downloaded successfully', 'success');
+        if (!logContent.trim()) {
+            this.showToast('No log content to download', 'warning');
+            return;
+        }
+
+        try {
+            const blob = new Blob([logContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `v2ray-monitor-log-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            this.showToast('Log downloaded successfully', 'success');
+        } catch (error) {
+            this.showToast('Failed to download log', 'error');
+            console.error('Download failed:', error);
+        }
     }
 
     // =============================================================================
@@ -401,8 +495,17 @@ class V2RayMonitor {
             const response = await this.apiCall(this.config.apiEndpoints.telegramConfig);
             const data = JSON.parse(response);
             
-            this.updateElement('botToken', data.botToken);
-            this.updateElement('chatId', data.chatId);
+            const botTokenInput = document.getElementById('botToken');
+            const chatIdInput = document.getElementById('chatId');
+            
+            if (botTokenInput && data.botToken) {
+                botTokenInput.value = data.botToken;
+            }
+            
+            if (chatIdInput && data.chatId) {
+                chatIdInput.value = data.chatId;
+            }
+            
             this.updateElement('deviceInfo', data.hostname || 'Unknown Device');
             
             const tunnelInput = document.getElementById('tunnelUrl');
@@ -411,20 +514,40 @@ class V2RayMonitor {
             }
         } catch (error) {
             this.showToast('Failed to load Telegram configuration', 'error');
+            console.error('Telegram config load failed:', error);
         }
     }
 
     async saveTelegramConfig() {
-        const botToken = document.getElementById('botToken').value.trim();
-        const chatId = document.getElementById('chatId').value.trim();
+        const botTokenInput = document.getElementById('botToken');
+        const chatIdInput = document.getElementById('chatId');
+        
+        if (!botTokenInput || !chatIdInput) {
+            this.showToast('Configuration form not found', 'error');
+            return;
+        }
+
+        const botToken = botTokenInput.value.trim();
+        const chatId = chatIdInput.value.trim();
         
         if (!botToken || !chatId) {
             this.showToast('Please fill in both Bot Token and Chat ID', 'warning');
             return;
         }
 
+        // Basic validation
+        if (!botToken.match(/^\d+:[A-Za-z0-9_-]+$/)) {
+            this.showToast('Invalid bot token format. Expected: 123456789:ABCdefGHI...', 'error');
+            return;
+        }
+
+        if (!chatId.match(/^-?\d+$/)) {
+            this.showToast('Invalid chat ID format. Expected numeric value.', 'error');
+            return;
+        }
+
         try {
-            await this.apiCallWithToast(
+            const response = await this.apiCallWithToast(
                 this.config.apiEndpoints.updateTelegramConfig,
                 {
                     method: 'POST',
@@ -434,6 +557,16 @@ class V2RayMonitor {
                 'Telegram configuration saved successfully',
                 'Failed to save Telegram configuration'
             );
+
+            // Parse response to check for errors
+            try {
+                const result = JSON.parse(response);
+                if (result.error) {
+                    this.showToast(result.error, 'error');
+                }
+            } catch (e) {
+                // Response might not be JSON, which is okay
+            }
         } catch (error) {
             // Error already handled by apiCallWithToast
         }
@@ -448,11 +581,16 @@ class V2RayMonitor {
                 'Failed to send test message'
             );
             
-            const result = JSON.parse(response);
-            if (result.ok) {
+            try {
+                const result = JSON.parse(response);
+                if (result.ok) {
+                    this.showToast('Test message sent successfully! Check your Telegram.', 'success');
+                } else {
+                    this.showToast(result.error || 'Failed to send test message', 'error');
+                }
+            } catch (e) {
+                // If response is not JSON, assume success if no error was thrown
                 this.showToast('Test message sent successfully!', 'success');
-            } else {
-                this.showToast('Failed to send test message', 'error');
             }
         } catch (error) {
             // Error already handled by apiCallWithToast
@@ -474,20 +612,52 @@ class V2RayMonitor {
             }
         } catch (error) {
             // Silently fail for tunnel URL updates
+            console.debug('Tunnel URL update failed:', error);
         }
     }
 
     copyTunnelUrl() {
         const tunnelInput = document.getElementById('tunnelUrl');
-        if (tunnelInput && tunnelInput.value && tunnelInput.value !== '🔄 Waiting for URL...') {
-            navigator.clipboard.writeText(tunnelInput.value).then(() => {
+        if (!tunnelInput) {
+            this.showToast('Tunnel URL input not found', 'error');
+            return;
+        }
+
+        const url = tunnelInput.value;
+        if (!url || url === '🔄 Waiting for URL...') {
+            this.showToast('No tunnel URL available to copy', 'warning');
+            return;
+        }
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(url).then(() => {
                 this.showToast('Tunnel URL copied to clipboard!', 'success');
             }).catch(() => {
-                this.showToast('Failed to copy URL', 'error');
+                this.fallbackCopyToClipboard(url);
             });
         } else {
-            this.showToast('No tunnel URL available to copy', 'warning');
+            this.fallbackCopyToClipboard(url);
         }
+    }
+
+    fallbackCopyToClipboard(text) {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+            document.execCommand('copy');
+            this.showToast('Tunnel URL copied to clipboard!', 'success');
+        } catch (err) {
+            this.showToast('Failed to copy URL', 'error');
+        }
+        
+        document.body.removeChild(textArea);
     }
 
     togglePasswordVisibility(inputId) {
@@ -541,7 +711,8 @@ class V2RayMonitor {
             this.updateElement('appVersion', data.appVersion || 'Unknown');
             this.updateElement('codeVersion', data.codeVersion || 'Unknown');
         } catch (error) {
-            this.showToast('Failed to load version information', 'error');
+            console.error('Version info load failed:', error);
+            // Don't show toast for version info failures
         }
     }
 
@@ -549,21 +720,27 @@ class V2RayMonitor {
         try {
             const response = await this.apiCall(this.config.apiEndpoints.checkUpdate);
             const data = JSON.parse(response);
-            const currentVersion = document.getElementById('appVersion').textContent;
+            const currentVersion = document.getElementById('appVersion')?.textContent;
             
-            if (data.version && data.version !== currentVersion) {
+            if (data.version && data.version !== currentVersion && data.zipUrl) {
                 this.showToast(
-                    `Update available: v${data.version} <button onclick="app.doUpdate('${data.zipUrl}')" class="underline ml-2">Update Now</button>`,
+                    `Update available: v${data.version} <button onclick="app.doUpdate('${data.zipUrl}')" class="underline ml-2 hover:text-blue-200">Update Now</button>`,
                     'info',
-                    10000
+                    15000
                 );
             }
         } catch (error) {
+            console.debug('Update check failed:', error);
             // Silently fail for update checks
         }
     }
 
     async doUpdate(url) {
+        if (!url) {
+            this.showToast('Invalid update URL', 'error');
+            return;
+        }
+
         if (confirm('Are you sure you want to update? This will require a reboot.')) {
             try {
                 await this.apiCallWithToast(
@@ -587,6 +764,9 @@ class V2RayMonitor {
             }, 1000);
         }
 
+        // Reset retry count on manual refresh
+        this.state.retryCount = 0;
+
         this.checkStatus();
         this.checkUsbStatus();
         this.updateLog();
@@ -605,7 +785,26 @@ let app;
 
 // Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    app = new V2RayMonitor();
+    try {
+        app = new V2RayMonitor();
+    } catch (error) {
+        console.error('Failed to initialize V2Ray Monitor:', error);
+        
+        // Show fallback error message
+        const errorDiv = document.createElement('div');
+        errorDiv.innerHTML = `
+            <div class="fixed inset-0 bg-red-600 text-white flex items-center justify-center z-50">
+                <div class="text-center p-8">
+                    <h1 class="text-2xl font-bold mb-4">Initialization Failed</h1>
+                    <p class="mb-4">Failed to start V2Ray Monitor Dashboard</p>
+                    <button onclick="location.reload()" class="bg-white text-red-600 px-4 py-2 rounded">
+                        Reload Page
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(errorDiv);
+    }
 });
 
 // Global functions for HTML onclick handlers
