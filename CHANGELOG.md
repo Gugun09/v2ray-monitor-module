@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.0.4] - 2025-01-04
+### Added
+- GitHub Actions untuk automated release dan CI/CD
+- Comprehensive uninstaller dengan backup user data
+- Enhanced error handling dan logging
+- Professional issue templates dan PR templates
+- Dependabot configuration untuk automated updates
+
+### Changed
+- Improved installer dengan better error handling
+- Enhanced uninstaller dengan complete cleanup
+- Updated documentation dengan GitHub Actions workflow
+- Better version management dan release process
+
+### Fixed
+- GitHub Actions workflow errors
+- Version consistency across all files
+- Package validation dan structure checks
+- Security scanning dan dependency management
+
 ## [1.0.3] - 2024-07-05
 ### Changed
 - Perbaikan robust Cloudflare Tunnel (hapus URL saat stop)

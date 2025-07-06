@@ -3,7 +3,7 @@ name: 🚀 Build and Release V2Ray Monitor Module
 on:
   push:
     tags:
-      - 'v1.0.4'
+      - 'v*.*.*'
   workflow_dispatch:
     inputs:
       version:
@@ -28,7 +28,9 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       version_code: ${{ steps.version.outputs.version_code }}
+      tag: ${{ steps.version.outputs.tag }}
       release_notes: ${{ steps.release_notes.outputs.notes }}
+      package_size: ${{ steps.package.outputs.size }}
       
     steps:
       - name: 📥 Checkout Repository
@@ -48,7 +50,7 @@ jobs:
           # Remove 'v' prefix if present
           VERSION_CLEAN=${VERSION#v}
           
-          # Extract version code (assuming format like 1.0.3 -> 103)
+          # Extract version code (assuming format like 1.0.4 -> 104)
           VERSION_CODE=$(echo $VERSION_CLEAN | sed 's/\.//g')
           
           echo "version=$VERSION_CLEAN" >> $GITHUB_OUTPUT
@@ -89,11 +91,12 @@ jobs:
             NOTES="Release ${{ steps.version.outputs.version }}"
           fi
           
-          # Save to file for multiline output
-          echo "$NOTES" > release_notes.md
-          echo "notes<<EOF" >> $GITHUB_OUTPUT
-          cat release_notes.md >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          # Save to output using delimiter
+          {
+            echo 'notes<<EOF'
+            echo "$NOTES"
+            echo 'EOF'
+          } >> $GITHUB_OUTPUT
 
       - name: 🔧 Update Module Properties
         run: |
@@ -118,6 +121,7 @@ jobs:
           cat update.json
 
       - name: 🗜️ Create Module Package
+        id: package
         run: |
           # Create temporary directory for packaging
           mkdir -p build
@@ -148,7 +152,7 @@ jobs:
           # Get package size
           PACKAGE_SIZE=$(du -h "${{ env.RELEASE_NAME }}.zip" | cut -f1)
           echo "📏 Package size: $PACKAGE_SIZE"
-          echo "package_size=$PACKAGE_SIZE" >> $GITHUB_ENV
+          echo "size=$PACKAGE_SIZE" >> $GITHUB_OUTPUT
 
       - name: 🔍 Validate Package Structure
         run: |
@@ -213,7 +217,7 @@ jobs:
       - name: 🎯 Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ needs.build.outputs.tag || github.ref_name }}
+          tag_name: ${{ needs.build.outputs.tag }}
           name: "🚀 V2Ray Monitor Module v${{ needs.build.outputs.version }}"
           body: |
             # 🚀 V2Ray Monitor Module v${{ needs.build.outputs.version }}
@@ -267,7 +271,7 @@ jobs:
             
             ---
             
-            **📏 Package Size**: ${{ env.package_size }}  
+            **📏 Package Size**: ${{ needs.build.outputs.package_size }}  
             **🏗️ Build**: `${{ github.sha }}`  
             **📅 Released**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
             
@@ -287,7 +291,7 @@ jobs:
           echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| 🏷️ Version | \`${{ needs.build.outputs.version }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| 📦 Package | \`${{ env.RELEASE_NAME }}.zip\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| 📏 Size | \`${{ env.package_size }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| 📏 Size | \`${{ needs.build.outputs.package_size }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| 🔗 Download | [Release Page](https://github.com/${{ github.repository }}/releases/tag/${{ needs.build.outputs.tag }}) |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🚀 Next Steps" >> $GITHUB_STEP_SUMMARY
@@ -305,6 +309,8 @@ jobs:
     steps:
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 🔄 Update Repository Files
         run: |
