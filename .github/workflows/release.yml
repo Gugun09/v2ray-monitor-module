@@ -1,4 +1,4 @@
-name: 🚀 Build and Release V2Ray Monitor Module
+name: 🚀 Simple Release V2Ray Monitor Module
 
 on:
   push:
@@ -10,27 +10,17 @@ on:
         description: 'Release version (e.g., v1.0.4)'
         required: true
         default: 'v1.0.4'
-      prerelease:
-        description: 'Mark as pre-release'
-        required: false
-        default: false
-        type: boolean
 
 env:
   MODULE_NAME: v2ray_monitor
   RELEASE_NAME: v2ray-monitor-module
 
 jobs:
-  build:
-    name: 🔨 Build Module Package
+  release:
+    name: 🎉 Build and Release
     runs-on: ubuntu-latest
-    
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      version_code: ${{ steps.version.outputs.version_code }}
-      tag: ${{ steps.version.outputs.tag }}
-      release_notes: ${{ steps.release_notes.outputs.notes }}
-      package_size: ${{ steps.package.outputs.size }}
+    permissions:
+      contents: write
       
     steps:
       - name: 📥 Checkout Repository
@@ -61,7 +51,7 @@ jobs:
             NOTES=$(awk '/^## \['"${{ steps.version.outputs.version }}"'\]/{flag=1; next} /^## \[/{flag=0} flag' CHANGELOG.md)
             
             if [[ -z "$NOTES" ]]; then
-              NOTES="### Release ${{ steps.version.outputs.version }}\n\n- Bug fixes\n- Improvements"
+              NOTES="### Release ${{ steps.version.outputs.version }}\n\n- Bug fixes and improvements"
             fi
           else
             NOTES="Release ${{ steps.version.outputs.version }}"
@@ -75,31 +65,63 @@ jobs:
 
       - name: 🔧 Update Module Properties
         run: |
+          # Update module.prop
           sed -i "s/^version=.*/version=${{ steps.version.outputs.version }}/" module.prop
           sed -i "s/^versionCode=.*/versionCode=${{ steps.version.outputs.version_code }}/" module.prop
           
+          # Update get_version.sh
+          sed -i "s/\"appVersion\": \"[^\"]*\"/\"appVersion\": \"${{ steps.version.outputs.version }}\"/" ui/www/cgi-bin/get_version.sh
+          
+          # Update customize.sh
+          sed -i "s/v[0-9]\+\.[0-9]\+\.[0-9]\+/v${{ steps.version.outputs.version }}/g" customize.sh
+          
+          # Create update.json
           cat > update.json <<EOF
           {
             "version": "${{ steps.version.outputs.version }}",
             "versionCode": ${{ steps.version.outputs.version_code }},
             "zipUrl": "https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/${{ env.RELEASE_NAME }}.zip",
-            "changelog": "https://github.com/${{ github.repository }}/raw/main/CHANGELOG.md"
+            "changelog": "https://github.com/${{ github.repository }}/raw/main/CHANGELOG.md",
+            "supportUrl": "https://github.com/${{ github.repository }}"
           }
           EOF
 
       - name: 🗜️ Create Module Package
-        id: package
         run: |
           mkdir -p build
-          cp -r module.prop service.sh customize.sh uninstall.sh system/ ui/ .env-example README.md CHANGELOG.md update.json build/
+          
+          # Copy all necessary files
+          cp -r \
+            module.prop \
+            service.sh \
+            customize.sh \
+            uninstall.sh \
+            system/ \
+            ui/ \
+            .env-example \
+            README.md \
+            CHANGELOG.md \
+            update.json \
+            build/
+          
+          # Create ZIP package
           cd build
           zip -r "../${{ env.RELEASE_NAME }}.zip" . -x "*.git*" "*.github*"
           cd ..
+          
+          # Get package info
           PACKAGE_SIZE=$(du -h "${{ env.RELEASE_NAME }}.zip" | cut -f1)
-          echo "size=$PACKAGE_SIZE" >> $GITHUB_OUTPUT
+          echo "📦 Package size: $PACKAGE_SIZE"
 
-      - name: 🔍 Validate Package Structure
+      - name: 🔍 Validate Package
         run: |
+          # Test ZIP integrity
+          if ! unzip -t "${{ env.RELEASE_NAME }}.zip" >/dev/null 2>&1; then
+            echo "❌ Package validation failed"
+            exit 1
+          fi
+          
+          # Check required files
           mkdir -p validate
           unzip -q "${{ env.RELEASE_NAME }}.zip" -d validate/
           
@@ -107,79 +129,66 @@ jobs:
             "module.prop"
             "service.sh"
             "system/xbin/v2ray_monitor.sh"
+            "ui/www/index.html"
           )
           
           for file in "${REQUIRED_FILES[@]}"; do
             if [[ ! -f "validate/$file" ]]; then
-              echo "::error::Missing required file: $file"
+              echo "❌ Missing required file: $file"
               exit 1
             fi
           done
+          
           rm -rf validate
-
-      - name: 📤 Upload Build Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.RELEASE_NAME }}-${{ steps.version.outputs.version }}
-          path: ${{ env.RELEASE_NAME }}.zip
-
-  release:
-    name: 🎉 Create GitHub Release
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      
-    steps:
-      - name: 📥 Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: 📥 Download Build Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ env.RELEASE_NAME }}-${{ needs.build.outputs.version }}
+          echo "✅ Package validation passed"
 
       - name: 🎯 Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ needs.build.outputs.tag }}
-          name: "V2Ray Monitor v${{ needs.build.outputs.version }}"
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "V2Ray Monitor v${{ steps.version.outputs.version }}"
           body: |
-            # V2Ray Monitor Module ${{ needs.build.outputs.version }}
+            # 🚀 V2Ray Monitor Module ${{ steps.version.outputs.version }}
             
-            ${{ needs.build.outputs.release_notes }}
+            ${{ steps.release_notes.outputs.notes }}
             
-            ## Installation
-            1. Download the ZIP file
-            2. Install via Magisk
-            3. Reboot device
+            ## 📥 Installation
+            1. Download the ZIP file below
+            2. Install via Magisk Manager
+            3. Reboot your device
+            4. Access web UI at `http://localhost:9091`
             
-            ## Features
-            - V2Ray monitoring
-            - Web dashboard
-            - Notifications
+            ## ✨ Features
+            - 🔄 Automatic V2Ray monitoring and restart
+            - 🌐 Web-based dashboard
+            - 📱 Telegram notifications
+            - ☁️ Cloudflare Tunnel support
+            - 🔌 USB tethering control
             
-            **Download**: [${{ env.RELEASE_NAME }}.zip](https://github.com/${{ github.repository }}/releases/download/${{ needs.build.outputs.tag }}/${{ env.RELEASE_NAME }}.zip)
+            ## 🔗 Links
+            - 📚 [Documentation](https://github.com/${{ github.repository }}/blob/main/README.md)
+            - 🐛 [Report Issues](https://github.com/${{ github.repository }}/issues)
+            - 💬 [Discussions](https://github.com/${{ github.repository }}/discussions)
+            
+            ---
+            
+            **Download**: [${{ env.RELEASE_NAME }}.zip](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/${{ env.RELEASE_NAME }}.zip)
           files: ${{ env.RELEASE_NAME }}.zip
           draft: false
-          prerelease: ${{ github.event.inputs.prerelease }}
+          prerelease: false
 
-  notify:
-    name: 📢 Post-Release Notifications
-    needs: [build, release]
-    runs-on: ubuntu-latest
-    if: success()
-    
-    steps:
-      - name: 🔄 Update Repository
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          
-      - name: 💾 Commit Version Updates
+      - name: 📊 Release Summary
         run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git add module.prop update.json
-          git commit -m "Update version to ${{ needs.build.outputs.version }}" || echo "No changes to commit"
-          git push
+          echo "## 🎉 Release Created Successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| 🏷️ Version | ${{ steps.version.outputs.version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 📦 Package | ${{ env.RELEASE_NAME }}.zip |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔗 Release | [View Release](https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.tag }}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| 📥 Download | [Download ZIP](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/${{ env.RELEASE_NAME }}.zip) |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🎯 Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. ✅ Release is now available for download" >> $GITHUB_STEP_SUMMARY
+          echo "2. 📢 Announce the release to users" >> $GITHUB_STEP_SUMMARY
+          echo "3. 📝 Update documentation if needed" >> $GITHUB_STEP_SUMMARY
