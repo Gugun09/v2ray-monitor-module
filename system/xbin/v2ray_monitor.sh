@@ -126,7 +126,9 @@ quick_recheck_connection() {
 # =============================================================================
 
 is_screen_on() {
-    su -c 'dumpsys power | grep "Display Power" | grep -q "state=ON"' 2>/dev/null
+    local state
+    state=$(su -c 'dumpsys power' | grep -E "mWakefulness=")
+    echo "$state" | grep -q "mWakefulness=Awake"
 }
 
 wake_device() {
