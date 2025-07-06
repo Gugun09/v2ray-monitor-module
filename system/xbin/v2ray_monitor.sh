@@ -136,9 +136,9 @@ wake_device() {
         log_info "Waking up device screen"
         su -c "input keyevent 26" 2>/dev/null
         sleep 1
+        su -c "input keyevent 82" 2>/dev/null
+        sleep 1
     fi
-    su -c "input keyevent 82" 2>/dev/null
-    sleep 1
 }
 
 restart_v2ray() {
