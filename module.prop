@@ -1,7 +1,7 @@
 id=v2ray_monitor
 name=V2Ray Monitor Auto Restart
-version=1.0.3
-versionCode=3
+version=1.0.4
+versionCode=4
 author=Gugun09
 description=Modul V2Ray Monitor dengan UI berbasis web untuk memantau status V2Ray dan melakukan restart otomatis jika koneksi terputus. Modul ini mencakup tampilan antarmuka grafis yang memungkinkan pengguna untuk melihat status terkini, mengendalikan V2Ray (mulai, berhenti, atau restart), serta memantau log secara langsung.
 maintainer=Gugun09

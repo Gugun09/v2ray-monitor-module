@@ -3,7 +3,7 @@ name: 🚀 Build and Release V2Ray Monitor Module
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - 'v1.0.4'
   workflow_dispatch:
     inputs:
       version:

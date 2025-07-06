@@ -243,7 +243,7 @@ verify_installation() {
 # Main installation function
 main() {
     ui_print "********************************************"
-    ui_print "  V2Ray Monitor Module Installer v1.0.3  "
+    ui_print "  V2Ray Monitor Module Installer v1.0.4  "
     ui_print "********************************************"
     ui_print ""
     

@@ -425,7 +425,7 @@ trap cleanup_uninstaller EXIT INT TERM
 # Main uninstall function
 main() {
     ui_print "********************************************"
-    ui_print "  V2Ray Monitor Module Uninstaller v1.0.3  "
+    ui_print "  V2Ray Monitor Module Uninstaller v1.0.4  "
     ui_print "********************************************"
     ui_print ""
     
