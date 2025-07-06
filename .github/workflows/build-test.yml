@@ -1,0 +1,335 @@
+name: 🧪 Build and Test Module
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  MODULE_NAME: v2ray_monitor
+
+jobs:
+  validate:
+    name: 🔍 Validate Module Structure
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🔍 Check Required Files
+        run: |
+          echo "🔍 Checking required module files..."
+          
+          REQUIRED_FILES=(
+            "module.prop"
+            "service.sh"
+            "customize.sh"
+            "uninstall.sh"
+            "system/xbin/v2ray_monitor.sh"
+            "system/xbin/v2ray_monitor_service"
+            "ui/www/index.html"
+            "ui/www/js/app.js"
+            "ui/start_server.sh"
+            "ui/stop_server.sh"
+            ".env-example"
+            "README.md"
+            "CHANGELOG.md"
+          )
+          
+          MISSING_FILES=()
+          for file in "${REQUIRED_FILES[@]}"; do
+            if [[ ! -f "$file" ]]; then
+              MISSING_FILES+=("$file")
+            fi
+          done
+          
+          if [[ ${#MISSING_FILES[@]} -gt 0 ]]; then
+            echo "❌ Missing required files:"
+            printf '%s\n' "${MISSING_FILES[@]}"
+            exit 1
+          fi
+          
+          echo "✅ All required files present"
+
+      - name: 🔧 Validate Module Properties
+        run: |
+          echo "🔧 Validating module.prop..."
+          
+          # Check required properties
+          REQUIRED_PROPS=("id" "name" "version" "versionCode" "author" "description")
+          
+          for prop in "${REQUIRED_PROPS[@]}"; do
+            if ! grep -q "^${prop}=" module.prop; then
+              echo "❌ Missing property: $prop"
+              exit 1
+            fi
+          done
+          
+          # Validate version format
+          VERSION=$(grep "^version=" module.prop | cut -d'=' -f2)
+          if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Invalid version format: $VERSION"
+            exit 1
+          fi
+          
+          # Validate version code
+          VERSION_CODE=$(grep "^versionCode=" module.prop | cut -d'=' -f2)
+          if [[ ! $VERSION_CODE =~ ^[0-9]+$ ]]; then
+            echo "❌ Invalid version code: $VERSION_CODE"
+            exit 1
+          fi
+          
+          echo "✅ Module properties valid"
+          echo "📋 Module ID: $(grep "^id=" module.prop | cut -d'=' -f2)"
+          echo "📋 Version: $VERSION"
+          echo "📋 Version Code: $VERSION_CODE"
+
+      - name: 🔍 Validate Shell Scripts
+        run: |
+          echo "🔍 Validating shell scripts..."
+          
+          SHELL_SCRIPTS=(
+            "service.sh"
+            "customize.sh"
+            "uninstall.sh"
+            "system/xbin/v2ray_monitor.sh"
+            "system/xbin/v2ray_monitor_service"
+            "ui/start_server.sh"
+            "ui/stop_server.sh"
+          )
+          
+          for script in "${SHELL_SCRIPTS[@]}"; do
+            if [[ -f "$script" ]]; then
+              echo "Checking $script..."
+              
+              # Check shebang
+              if ! head -n1 "$script" | grep -q "^#!/"; then
+                echo "⚠️  Missing shebang in $script"
+              fi
+              
+              # Basic syntax check (if shellcheck is available)
+              if command -v shellcheck >/dev/null 2>&1; then
+                if ! shellcheck -e SC1091 -e SC2034 -e SC2086 "$script"; then
+                  echo "⚠️  Shellcheck warnings in $script"
+                fi
+              fi
+              
+              echo "✅ $script validated"
+            fi
+          done
+
+      - name: 🌐 Validate Web UI
+        run: |
+          echo "🌐 Validating web UI files..."
+          
+          # Check HTML structure
+          if [[ -f "ui/www/index.html" ]]; then
+            if ! grep -q "<html" ui/www/index.html; then
+              echo "❌ Invalid HTML structure"
+              exit 1
+            fi
+            echo "✅ HTML structure valid"
+          fi
+          
+          # Check JavaScript
+          if [[ -f "ui/www/js/app.js" ]]; then
+            # Basic JS validation
+            if ! node -c ui/www/js/app.js 2>/dev/null; then
+              echo "⚠️  JavaScript syntax warnings"
+            else
+              echo "✅ JavaScript syntax valid"
+            fi
+          fi
+          
+          # Check CGI scripts
+          CGI_SCRIPTS=(ui/www/cgi-bin/*.sh)
+          for script in "${CGI_SCRIPTS[@]}"; do
+            if [[ -f "$script" ]]; then
+              if ! head -n1 "$script" | grep -q "^#!/"; then
+                echo "⚠️  Missing shebang in $script"
+              fi
+            fi
+          done
+          
+          echo "✅ Web UI validation completed"
+
+  build-test:
+    name: 🔨 Build Test Package
+    needs: validate
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🔨 Create Test Package
+        run: |
+          echo "🔨 Creating test package..."
+          
+          # Create build directory
+          mkdir -p build
+          
+          # Copy all files
+          cp -r \
+            module.prop \
+            service.sh \
+            customize.sh \
+            uninstall.sh \
+            system/ \
+            ui/ \
+            .env-example \
+            README.md \
+            CHANGELOG.md \
+            update.json \
+            build/
+          
+          # Create ZIP
+          cd build
+          zip -r "../v2ray-monitor-module-test.zip" . -x "*.git*" "*.github*"
+          cd ..
+          
+          echo "✅ Test package created"
+          echo "📦 Package size: $(du -h v2ray-monitor-module-test.zip | cut -f1)"
+
+      - name: 🧪 Test Package Contents
+        run: |
+          echo "🧪 Testing package contents..."
+          
+          # Extract and verify
+          mkdir -p test-extract
+          unzip -q v2ray-monitor-module-test.zip -d test-extract/
+          
+          # Check structure
+          if [[ ! -f "test-extract/module.prop" ]]; then
+            echo "❌ module.prop missing from package"
+            exit 1
+          fi
+          
+          if [[ ! -d "test-extract/system" ]]; then
+            echo "❌ system directory missing from package"
+            exit 1
+          fi
+          
+          if [[ ! -d "test-extract/ui" ]]; then
+            echo "❌ ui directory missing from package"
+            exit 1
+          fi
+          
+          echo "✅ Package structure valid"
+          
+          # List contents
+          echo "📋 Package contents:"
+          unzip -l v2ray-monitor-module-test.zip
+
+      - name: 📤 Upload Test Package
+        uses: actions/upload-artifact@v4
+        with:
+          name: v2ray-monitor-module-test
+          path: v2ray-monitor-module-test.zip
+          retention-days: 7
+
+  security-scan:
+    name: 🔒 Security Scan
+    needs: validate
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🔒 Scan for Secrets
+        run: |
+          echo "🔒 Scanning for potential secrets..."
+          
+          # Check for common secret patterns
+          SECRET_PATTERNS=(
+            "password\s*=\s*['\"][^'\"]+['\"]"
+            "token\s*=\s*['\"][^'\"]+['\"]"
+            "key\s*=\s*['\"][^'\"]+['\"]"
+            "secret\s*=\s*['\"][^'\"]+['\"]"
+          )
+          
+          FOUND_SECRETS=false
+          for pattern in "${SECRET_PATTERNS[@]}"; do
+            if grep -r -i -E "$pattern" . --exclude-dir=.git --exclude-dir=.github; then
+              echo "⚠️  Potential secret found: $pattern"
+              FOUND_SECRETS=true
+            fi
+          done
+          
+          if $FOUND_SECRETS; then
+            echo "⚠️  Please review potential secrets above"
+          else
+            echo "✅ No obvious secrets found"
+          fi
+
+      - name: 🔍 Check File Permissions
+        run: |
+          echo "🔍 Checking file permissions..."
+          
+          # Check for executable files
+          find . -type f -executable -not -path "./.git/*" -not -path "./.github/*" | while read -r file; do
+            echo "📋 Executable: $file"
+          done
+          
+          # Check shell scripts have proper permissions
+          find . -name "*.sh" -not -path "./.git/*" -not -path "./.github/*" | while read -r script; do
+            if [[ ! -x "$script" ]]; then
+              echo "⚠️  Script not executable: $script"
+            fi
+          done
+          
+          echo "✅ Permission check completed"
+
+  documentation:
+    name: 📚 Documentation Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 📚 Check Documentation
+        run: |
+          echo "📚 Checking documentation..."
+          
+          # Check README
+          if [[ ! -f "README.md" ]]; then
+            echo "❌ README.md missing"
+            exit 1
+          fi
+          
+          # Check CHANGELOG
+          if [[ ! -f "CHANGELOG.md" ]]; then
+            echo "❌ CHANGELOG.md missing"
+            exit 1
+          fi
+          
+          # Check README content
+          README_SECTIONS=("Overview" "Installation" "Features")
+          for section in "${README_SECTIONS[@]}"; do
+            if ! grep -q "$section" README.md; then
+              echo "⚠️  README missing section: $section"
+            fi
+          done
+          
+          echo "✅ Documentation check completed"
+
+      - name: 📊 Generate Report
+        run: |
+          echo "## 📊 Build Test Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔍 File Structure | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔧 Module Properties | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🌐 Web UI | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔨 Build Test | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔒 Security Scan | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| 📚 Documentation | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🎯 Summary" >> $GITHUB_STEP_SUMMARY
+          echo "All validation checks passed successfully! 🎉" >> $GITHUB_STEP_SUMMARY

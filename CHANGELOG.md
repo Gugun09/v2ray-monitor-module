@@ -1,5 +1,46 @@
 # Changelog
 
+## [1.0.6] - 2025-07-06
+### Fixed
+- Perbaikan logika pengecekan dan pembuatan file PID agar script tidak salah deteksi status running
+- Perbaikan parsing file .env dan environment agar variabel Telegram terisi dengan benar
+- Hapus readonly pada variabel ENV_FILE di semua script agar tidak error saat di-source ulang
+- Penambahan log debug untuk troubleshooting notifikasi Telegram (cek token, chat id, dan response curl)
+- Troubleshooting dan penjelasan error Cloudflare Tunnel 1033 (origin service tidak aktif)
+- Penyesuaian minor pada script dan dokumentasi sesuai hasil troubleshooting
+
+## [1.0.5] - 2025-01-06
+### Fixed
+- Fixed download URL in customize.sh installer
+- Fixed GitHub release workflow and package naming
+- Corrected ZIP file corruption issue during installation
+- Improved error handling in installer script
+
+### Changed
+- Updated installer to use correct release filename
+- Enhanced download verification process
+- Better error messages for failed downloads
+
+## [1.0.4] - 2025-01-04
+### Added
+- GitHub Actions untuk automated release dan CI/CD
+- Comprehensive uninstaller dengan backup user data
+- Enhanced error handling dan logging
+- Professional issue templates dan PR templates
+- Dependabot configuration untuk automated updates
+
+### Changed
+- Improved installer dengan better error handling
+- Enhanced uninstaller dengan complete cleanup
+- Updated documentation dengan GitHub Actions workflow
+- Better version management dan release process
+
+### Fixed
+- GitHub Actions workflow errors
+- Version consistency across all files
+- Package validation dan structure checks
+- Security scanning dan dependency management
+
 ## [1.0.3] - 2024-07-05
 ### Changed
 - Perbaikan robust Cloudflare Tunnel (hapus URL saat stop)

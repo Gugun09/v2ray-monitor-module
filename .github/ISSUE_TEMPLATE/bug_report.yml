@@ -1,0 +1,141 @@
+name: 🐛 Bug Report
+description: Report a bug or issue with V2Ray Monitor Module
+title: "[BUG] "
+labels: ["bug", "needs-triage"]
+assignees: ["Gugun09"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🐛 Bug Report
+        
+        Thank you for taking the time to report a bug! Please fill out the form below to help us understand and fix the issue.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please check the following before submitting
+      options:
+        - label: I have searched existing issues to ensure this is not a duplicate
+          required: true
+        - label: I have read the documentation and troubleshooting guide
+          required: true
+        - label: I am using the latest version of the module
+          required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Module Version
+      description: What version of V2Ray Monitor Module are you using?
+      placeholder: "e.g., 1.0.3"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: device
+    attributes:
+      label: Device Type
+      description: What type of device are you using?
+      options:
+        - Android Phone
+        - Android Tablet
+        - Android TV/Box
+        - Other (specify in description)
+    validations:
+      required: true
+
+  - type: input
+    id: android_version
+    attributes:
+      label: Android Version
+      description: What version of Android are you running?
+      placeholder: "e.g., Android 12, Android 13"
+    validations:
+      required: true
+
+  - type: input
+    id: magisk_version
+    attributes:
+      label: Magisk Version
+      description: What version of Magisk are you using?
+      placeholder: "e.g., 26.1, 26.4"
+    validations:
+      required: true
+
+  - type: textarea
+    id: bug_description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is
+      placeholder: Describe what happened and what you expected to happen
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps_to_reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Steps to reproduce the behavior
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. Scroll down to '...'
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: Expected Behavior
+      description: A clear and concise description of what you expected to happen
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual_behavior
+    attributes:
+      label: Actual Behavior
+      description: A clear and concise description of what actually happened
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Please provide relevant logs from the module
+      placeholder: |
+        You can get logs from:
+        - Web UI: http://localhost:9091 (Log section)
+        - Terminal: cat /data/local/tmp/v2ray_monitor.log
+        - Magisk logs
+      render: shell
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: If applicable, add screenshots to help explain your problem
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional Context
+      description: Add any other context about the problem here
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How critical is this issue?
+      options:
+        - Low - Minor inconvenience
+        - Medium - Affects functionality
+        - High - Breaks core features
+        - Critical - Module unusable
+    validations:
+      required: true

@@ -1,0 +1,47 @@
+name: 🔄 Auto Update Check
+
+on:
+  schedule:
+    # Check for updates daily at 00:00 UTC
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  check-dependencies:
+    name: 🔍 Check Dependencies
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🔍 Check for Updates
+        run: |
+          echo "🔍 Checking for dependency updates..."
+          
+          # Check Tailwind CSS version
+          CURRENT_TAILWIND=$(grep -o 'tailwindcss@[0-9.]*' ui/www/index.html || echo "not found")
+          echo "📋 Current Tailwind: $CURRENT_TAILWIND"
+          
+          # Check Font Awesome version
+          CURRENT_FA=$(grep -o 'font-awesome/[0-9.]*' ui/www/index.html || echo "not found")
+          echo "📋 Current Font Awesome: $CURRENT_FA"
+          
+          # Check for security advisories (if any dependencies)
+          echo "🔒 Checking security advisories..."
+          
+          # Create update report
+          echo "## 🔄 Dependency Update Report" >> update_report.md
+          echo "" >> update_report.md
+          echo "- 🎨 **Tailwind CSS**: $CURRENT_TAILWIND" >> update_report.md
+          echo "- 🎯 **Font Awesome**: $CURRENT_FA" >> update_report.md
+          echo "- 📅 **Check Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> update_report.md
+          
+          cat update_report.md
+
+      - name: 📊 Update Summary
+        run: |
+          echo "## 🔄 Auto Update Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Dependency check completed" >> $GITHUB_STEP_SUMMARY
+          echo "📅 Last checked: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY
