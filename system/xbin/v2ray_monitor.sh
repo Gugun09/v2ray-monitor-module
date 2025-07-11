@@ -13,7 +13,12 @@ readonly RESTART_COUNT_FILE="/data/local/tmp/v2ray_restart_count"
 ENV_FILE="/data/local/tmp/.env"
 
 # Network Configuration
-readonly TARGET_URL="https://creativeservices.netflix.com"
+TARGET_URLS=(
+    "https://creativeservices.netflix.com"
+    "http://connectivitycheck.gstatic.com/generate_204"
+    "http://clients3.google.com/generate_204"
+    "http://captive.apple.com/hotspot-detect.html"
+)
 readonly CONNECT_TIMEOUT=1
 readonly MAX_TIMEOUT=2
 readonly WRAPPER_TIMEOUT=3
@@ -113,12 +118,22 @@ get_connected_devices() {
 
 # Check VPN connection using Netflix bug
 check_vpn_connection() {
-    su -c "timeout $WRAPPER_TIMEOUT curl --silent --fail --connect-timeout $CONNECT_TIMEOUT --max-time $MAX_TIMEOUT $TARGET_URL" >/dev/null 2>&1
+    for url in "${TARGET_URLS[@]}"; do
+        if su -c "timeout $WRAPPER_TIMEOUT curl --silent --fail --connect-timeout $CONNECT_TIMEOUT --max-time $MAX_TIMEOUT $url" >/dev/null 2>&1; then
+            return 0
+        fi
+    done
+    return 1
 }
 
 # Quick recheck with even shorter timeout
 quick_recheck_connection() {
-    su -c "timeout 2 curl --silent --fail --connect-timeout 1 --max-time 1 $TARGET_URL" >/dev/null 2>&1
+    for url in "${TARGET_URLS[@]}"; do
+        if su -c "timeout 2 curl --silent --fail --connect-timeout 1 --max-time 1 $url" >/dev/null 2>&1; then
+            return 0
+        fi
+    done
+    return 1
 }
 
 # =============================================================================
@@ -142,28 +157,56 @@ wake_device() {
 }
 
 restart_v2ray() {
-    log_info "Attempting to restart V2Ray..."
-    
-    wake_device
-    
-    # Open v2rayNG app
-    if ! su -c "am start -n com.v2ray.ang/com.v2ray.ang.ui.MainActivity" 2>/dev/null; then
-        log_error "Failed to open v2rayNG app"
+    log_info "Attempting to stop V2Ray via broadcast..."
+    if su -c "am broadcast -a com.v2ray.ang.STOP_VPN -n com.v2ray.ang/.receiver.MyVpnReceiver --es token abc123" 2>/dev/null; then
+        log_info "Broadcast sent to stop V2Ray"
+    else
+        log_error "Failed to send broadcast to stop V2Ray"
         return 1
     fi
-    sleep 1
 
-    # Tap to activate V2Ray
-    su -c "input tap 1027 169" 2>/dev/null
-    sleep 1
-    su -c "input tap 648 195" 2>/dev/null
-    
+    # Tambahkan delay agar service benar-benar stop
+    local delay=5
+    log_info "Waiting $delay seconds before starting V2Ray again..."
+    sleep $delay
+
+    log_info "Attempting to start V2Ray via broadcast..."
+    if su -c "am broadcast -a com.v2ray.ang.START_VPN -n com.v2ray.ang/.receiver.MyVpnReceiver --es token abc123" 2>/dev/null; then
+        log_info "Broadcast sent to start V2Ray"
+    else
+        log_error "Failed to send broadcast to start V2Ray"
+        return 1
+    fi
+
     # Update restart count
     local restart_count=$(cat "$RESTART_COUNT_FILE" 2>/dev/null || echo "0")
     echo $((restart_count + 1)) > "$RESTART_COUNT_FILE"
-    
     log_info "V2Ray restart completed. Total restarts today: $((restart_count + 1))"
 }
+
+# restart_v2ray() {
+#     log_info "Attempting to restart V2Ray..."
+    
+#     wake_device
+    
+#     # Open v2rayNG app
+#     if ! su -c "am start -n com.v2ray.ang/com.v2ray.ang.ui.MainActivity" 2>/dev/null; then
+#         log_error "Failed to open v2rayNG app"
+#         return 1
+#     fi
+#     sleep 1
+
+#     # Tap to activate V2Ray
+#     su -c "input tap 1027 169" 2>/dev/null
+#     sleep 1
+#     su -c "input tap 648 195" 2>/dev/null
+    
+#     # Update restart count
+#     local restart_count=$(cat "$RESTART_COUNT_FILE" 2>/dev/null || echo "0")
+#     echo $((restart_count + 1)) > "$RESTART_COUNT_FILE"
+    
+#     log_info "V2Ray restart completed. Total restarts today: $((restart_count + 1))"
+# }
 
 # =============================================================================
 # Telegram Notification Functions

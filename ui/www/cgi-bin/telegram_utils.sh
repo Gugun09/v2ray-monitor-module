@@ -18,5 +18,5 @@ send_telegram() {
     fi
     curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
         -d chat_id="$TELEGRAM_CHAT_ID" \
-        -d text="$MESSAGE" >> /data/local/tmp/v2ray_monitor.log 2>&1
+        -d text="$MESSAGE" > /dev/null
 } 
