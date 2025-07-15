@@ -1,7 +1,7 @@
 #!/system/bin/sh
 
 # =============================================================================
-# V2Ray Monitor Script - Production Ready Version
+# V2Ray Monitor Script - Optimized Version with Faster Connection Detection
 # =============================================================================
 
 # Constants
@@ -19,12 +19,19 @@ TARGET_URLS=(
     "http://clients3.google.com/generate_204"
     "http://captive.apple.com/hotspot-detect.html"
 )
+PING_TARGETS=(
+    "8.8.8.8"           # Google DNS
+    "1.1.1.1"           # Cloudflare DNS
+    "208.67.222.222"    # OpenDNS
+)
 readonly CONNECT_TIMEOUT=1
 readonly MAX_TIMEOUT=2
 readonly WRAPPER_TIMEOUT=3
 readonly MAX_RETRY=2
 readonly CHECK_INTERVAL=3
 readonly NORMAL_INTERVAL=8
+readonly PING_TIMEOUT=1  # 1 second timeout for ping
+readonly PING_COUNT=2    # Only send 2 ping packets
 
 # Device Info
 readonly HOSTNAME=$(getprop ro.product.model 2>/dev/null || echo "Unknown")
@@ -55,7 +62,7 @@ log_warn() {
 # Check if required binaries exist
 check_dependencies() {
     local missing_deps=""
-    for bin in curl am input awk cut head ps grep su timeout; do
+    for bin in curl am input awk cut head ps grep su timeout ping; do
         if ! command -v "$bin" >/dev/null 2>&1; then
             missing_deps="$missing_deps $bin"
         fi
@@ -104,6 +111,16 @@ source_utilities() {
 # Network Functions
 # =============================================================================
 
+# Check basic internet connectivity with ping
+check_internet_connectivity() {
+    for target in "${PING_TARGETS[@]}"; do
+        if ping -c "$PING_COUNT" -W "$PING_TIMEOUT" "$target" >/dev/null 2>&1; then
+            return 0
+        fi
+    done
+    return 1
+}
+
 get_public_ip() {
     timeout 5 curl -s --connect-timeout 2 --max-time 3 https://api64.ipify.org 2>/dev/null || echo "Unknown"
 }
@@ -118,6 +135,13 @@ get_connected_devices() {
 
 # Check VPN connection using Netflix bug
 check_vpn_connection() {
+    # First check basic internet connectivity
+    if ! check_internet_connectivity; then
+        log_warn "No internet connection detected"
+        return 1
+    fi
+    
+    # If internet is available, check VPN status
     for url in "${TARGET_URLS[@]}"; do
         if su -c "timeout $WRAPPER_TIMEOUT curl --silent --fail --connect-timeout $CONNECT_TIMEOUT --max-time $MAX_TIMEOUT $url" >/dev/null 2>&1; then
             return 0
@@ -128,6 +152,12 @@ check_vpn_connection() {
 
 # Quick recheck with even shorter timeout
 quick_recheck_connection() {
+    # First check basic internet connectivity
+    if ! check_internet_connectivity; then
+        return 1
+    fi
+    
+    # If internet is available, check VPN status
     for url in "${TARGET_URLS[@]}"; do
         if su -c "timeout 2 curl --silent --fail --connect-timeout 1 --max-time 1 $url" >/dev/null 2>&1; then
             return 0
@@ -169,7 +199,7 @@ restart_v2ray() {
         return 1
     fi
 
-    # Tambahkan delay agar service benar-benar stop
+    # Add delay to ensure service is stopped
     local delay=5
     log_info "Waiting $delay seconds before starting V2Ray again..."
     sleep $delay
@@ -187,30 +217,6 @@ restart_v2ray() {
     echo $((restart_count + 1)) > "$RESTART_COUNT_FILE"
     log_info "V2Ray restart completed. Total restarts today: $((restart_count + 1))"
 }
-
-# restart_v2ray() {
-#     log_info "Attempting to restart V2Ray..."
-    
-#     wake_device
-    
-#     # Open v2rayNG app
-#     if ! su -c "am start -n com.v2ray.ang/com.v2ray.ang.ui.MainActivity" 2>/dev/null; then
-#         log_error "Failed to open v2rayNG app"
-#         return 1
-#     fi
-#     sleep 1
-
-#     # Tap to activate V2Ray
-#     su -c "input tap 1027 169" 2>/dev/null
-#     sleep 1
-#     su -c "input tap 648 195" 2>/dev/null
-    
-#     # Update restart count
-#     local restart_count=$(cat "$RESTART_COUNT_FILE" 2>/dev/null || echo "0")
-#     echo $((restart_count + 1)) > "$RESTART_COUNT_FILE"
-    
-#     log_info "V2Ray restart completed. Total restarts today: $((restart_count + 1))"
-# }
 
 # =============================================================================
 # Telegram Notification Functions
