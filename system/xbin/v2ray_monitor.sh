@@ -158,6 +158,10 @@ wake_device() {
 
 restart_v2ray() {
     log_info "Attempting to stop V2Ray via broadcast..."
+
+    wake_device
+    
+    # Stop V2Ray service using broadcast
     if su -c "am broadcast -a com.v2ray.ang.STOP_VPN -n com.v2ray.ang/.receiver.MyVpnReceiver --es token abc123" 2>/dev/null; then
         log_info "Broadcast sent to stop V2Ray"
     else
