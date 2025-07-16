@@ -26,9 +26,9 @@ PING_TARGETS=(
 )
 readonly CONNECT_TIMEOUT=1
 readonly MAX_TIMEOUT=2
-readonly WRAPPER_TIMEOUT=3
-readonly MAX_RETRY=2
-readonly CHECK_INTERVAL=3
+readonly WRAPPER_TIMEOUT=1
+readonly MAX_RETRY=1
+readonly CHECK_INTERVAL=2
 readonly NORMAL_INTERVAL=8
 readonly PING_TIMEOUT=1  # 1 second timeout for ping
 readonly PING_COUNT=2    # Only send 2 ping packets
@@ -304,6 +304,7 @@ start() {
     nohup sh "$0" monitor >> "$LOG_FILE" 2>&1 & 
     echo $! > "$PID_FILE"
     log_info "Script started with PID $(cat $PID_FILE)"
+    exit 0
 }
 
 stop() {
