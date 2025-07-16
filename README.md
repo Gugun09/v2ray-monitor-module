@@ -1,5 +1,19 @@
 # V2Ray Monitor Module
 
+## ⚠️ Prasyarat (Prerequisites)
+
+Agar script dan modul berjalan dengan baik, pastikan perangkat Anda sudah menginstall **BusyBox**. BusyBox menyediakan banyak utilitas Unix yang dibutuhkan oleh script monitoring ini.
+
+- **Android (rooted):**
+  - Install module BusyBox via Magisk (rekomendasi: [BusyBox by osm0sis](https://github.com/Magisk-Modules-Alt-Repo/BuiltIn-BusyBox))
+  - Atau, install aplikasi BusyBox dari Play Store, lalu lakukan install dari aplikasinya
+
+Cek instalasi dengan perintah:
+```sh
+busybox --help
+```
+Jika muncul bantuan BusyBox, berarti sudah terinstall dengan benar.
+
 ## 📌 Overview
 
 V2Ray Monitor Module adalah sebuah sistem monitoring sederhana untuk V2Ray yang memungkinkan pengguna untuk:

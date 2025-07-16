@@ -122,7 +122,7 @@ check_internet_connectivity() {
 }
 
 get_public_ip() {
-    timeout 5 curl -s --connect-timeout 2 --max-time 3 https://api64.ipify.org 2>/dev/null || echo "Unknown"
+    timeout 1 curl -s --connect-timeout 2 --max-time 3 https://api64.ipify.org 2>/dev/null || echo "Unknown"
 }
 
 get_local_ip() {
@@ -159,7 +159,7 @@ quick_recheck_connection() {
     
     # If internet is available, check VPN status
     for url in "${TARGET_URLS[@]}"; do
-        if su -c "timeout 2 curl --silent --fail --connect-timeout 1 --max-time 1 $url" >/dev/null 2>&1; then
+        if su -c "timeout 1 curl --silent --fail --connect-timeout 1 --max-time 1 $url" >/dev/null 2>&1; then
             return 0
         fi
     done
