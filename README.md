@@ -93,4 +93,8 @@ Proyek ini menggunakan lisensi MIT. Silakan gunakan dan modifikasi sesuai kebutu
 
 🔥 **V2Ray Monitor Module** membantu kamu mengelola V2Ray dengan mudah, lengkap dengan UI dan notifikasi otomatis! 🚀
 
-[![Get it on Google Play](https://play.google.com/intl/en_us/badges/images/generic/en_badge_web_generic.png)](https://play.google.com/store/apps/details?id=com.v2ray.ang&hl=id)
+## 📥 Download v2rayNG
+
+Untuk menjalankan V2Ray Monitor Module, Anda memerlukan aplikasi v2rayNG (Android). Silakan unduh APK versi terbaru di bawah ini:
+
+[![Download v2rayNG](https://img.shields.io/badge/Download-v2rayNG-blue?logo=android&style=for-the-badge)](https://github.com/Gugun09/v2rayNG/releases/latest)
