@@ -14,7 +14,7 @@ ENV_FILE="/data/local/tmp/.env"
 
 # Network Configuration
 TARGET_URLS=(
-    "https://creativeservices.netflix.com"
+    "http://creativeservices.netflix.com"
     "http://connectivitycheck.gstatic.com/generate_204"
     "http://clients3.google.com/generate_204"
     "http://captive.apple.com/hotspot-detect.html"
@@ -143,7 +143,7 @@ check_vpn_connection() {
     
     # If internet is available, check VPN status
     for url in "${TARGET_URLS[@]}"; do
-        if su -c "timeout $WRAPPER_TIMEOUT curl --silent --fail --connect-timeout $CONNECT_TIMEOUT --max-time $MAX_TIMEOUT $url" >/dev/null 2>&1; then
+        if su -c "timeout $WRAPPER_TIMEOUT curl --silent --fail --dns-servers 8.8.8.8,1.1.1.1 --connect-timeout $CONNECT_TIMEOUT --max-time $MAX_TIMEOUT $url" >/dev/null 2>&1; then
             return 0
         fi
     done
@@ -159,7 +159,7 @@ quick_recheck_connection() {
     
     # If internet is available, check VPN status
     for url in "${TARGET_URLS[@]}"; do
-        if su -c "timeout 1 curl --silent --fail --connect-timeout 1 --max-time 1 $url" >/dev/null 2>&1; then
+        if su -c "timeout 1 curl --silent --fail --dns-servers 8.8.8.8,1.1.1.1 --connect-timeout 1 --max-time 1 $url" >/dev/null 2>&1; then
             return 0
         fi
     done
